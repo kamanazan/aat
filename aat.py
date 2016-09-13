@@ -7,46 +7,101 @@ import time
 import csv
 import decimal
 
-
-class ViewerPanel(wx.Panel):
-	""""""
+class ImagePanel(wx.Panel):
 	def __init__(self, parent):
-		"""Constructor"""
 		wx.Panel.__init__(self, parent)
-
 		self.widthDisp, self.heightDisp = wx.DisplaySize()
-		width, height = wx.DisplaySize()
-		# self.picPaths = []
-		self.category = ''
-		self.picPaths = glob.glob('images\*.jpg')
+		self.image_name = ''
 		self.currentImage = ''
+		self.images = []
 		self.totalPictures = 0
-		self.widthDisp, self.heightDisp = wx.DisplaySize()
-		self.startTime = 0.0
-		self.responseTime = 0.0
-		self.firstResponse = 0.0
-		self.score = []
 		self.isWrong = ''
-		self.photoMaxSize = height - 200
+		self.picPaths = glob.glob('images\*.jpg')
 		self.layout()
+
+	def wrong_action(self, warna=None):
+		pass
+
+	def prepareImages(self):
+		pass
+
+	def setCurrentImage(self, image):
+		self.currentImage = image
+
+	def getRandomImage(self):
+		return self.images.pop(self.images.index(random.choice(self.images))) if self.images else None
+
+	def shouldStop(self):
+		return len(self.images) == 0
 
 	def layout(self):
 		"""
-			Layout the widgets on the panel
-			"""
+		Layout the widgets on the panel
+		"""
+		self.img = wx.EmptyImage(1,1)
+		self.imgSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
+		self.imageCtrl = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.img))
+		self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
+		self.imgSizer.Fit(self)
+		self.SetSizer(self.imgSizer)
 
-		self.mainSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
+	def loadImage(self, action, scale):
+		"""
+		action: 'PUSH' or 'PULL', determine whether the image should be zoomed out/zoomed in
+		scale: current y-axis of the joystick, this is used for smoother scaling
+		"""
+		image = self.currentImage
+		self.image_name = os.path.basename(image)
+		self.img = wx.Image(image, wx.BITMAP_TYPE_ANY)
+		width = 400
+		height = 400
+
+		if action is not None:
+			if action == 'PUSH':
+				target_size = 399
+				print 'PUSH!'
+				if self.image_name.count('_G'):
+					self.wrong_action(warna='G')
+				else:
+					self.wrong_action()
+				width = 400 - (target_size * scale)
+				height = 400 - (target_size * scale)
+			elif action == 'PULL':
+				target_size = self.heightDisp - 400
+				print 'PULL!'
+				if self.image_name.count('_S'):
+					self.wrong_action(warna='S')
+				else:
+					self.wrong_action()
+				width = 400 + (target_size * scale)
+				height = 400 + (target_size * scale)
+			print "img left:", len(self.images)
+		print 'new size: ', int(width), int(height)
+		self.img = self.img.Scale(int(width), int(height))
+		self.imageCtrl.SetBitmap(wx.BitmapFromImage(self.img))
+		self.imgSizer.Remove(0)
+		self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
+		self.Update()
+		self.Layout()
+		self.Refresh()
 
 
-		self.images = []
+class FormPenilaian(ImagePanel):
+	""""""
+	def __init__(self, parent):
+		"""Constructor"""
+		super(FormPenilaian, self).__init__(parent)
+		self.category = ''
+		self.firstResponse = 0.0
+		self.startTime = time.time()
+		self.score = []
 
-		img = wx.EmptyImage(self.photoMaxSize, self.photoMaxSize)
-		self.imageCtrl = wx.StaticBitmap(self, wx.ID_ANY,
-										 wx.BitmapFromImage(img))
-		self.mainSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
-
-		self.SetSizer(self.mainSizer)
-
+	def wrong_action(self, warna=None):
+		if warna:
+			self.isWrong = 'SALAH'
+		else:
+			self.isWrong = ''
+			
 	def prepareImages(self):
 		image_list = [img for img in self.picPaths if (img.count('Happy') or img.count('Neutral'))]
 		print "total image: ", len(image_list)
@@ -115,68 +170,14 @@ class ViewerPanel(wx.Panel):
 		self.category = responden_data[-1]
 		self.score.append(responden_data)
 		self.score.append(['TGL', 'RAS', 'GENDER', 'EKSPRESI', 'WARNA', 'RESPON AWAL', 'RESPON AKHIR', 'KET'])
-
-	def getRandomImage(self):
-		return self.images.pop(self.images.index(random.choice(self.images)))
-
-	def shouldStop(self):
-		return len(self.images) == 0
-
-	def loadImage(self, action):
-		""""""
-		image = self.currentImage
-		image_name = os.path.basename(image)
-		img = wx.Image(image, wx.BITMAP_TYPE_ANY)
-
-		width = img.GetWidth()
-		height = img.GetHeight()
-
-		if self.heightDisp > height:
-			scale = self.heightDisp / float(height)
-		else:
-			scale = height / float(self.heightDisp)
-		NewW = 400
-		NewH = 400
-		if action is not None:
-			if action == 'PUSH':
-				print 'PUSH!'
-				if image_name.count('_G'):
-					self.isWrong = 'SALAH'
-				NewW = 20
-				NewH = 20
-			elif action == 'PULL':
-				print 'PULL!'
-				if image_name.count('_S'):
-					self.isWrong = 'SALAH'
-				NewW = self.heightDisp
-				NewH = self.heightDisp
-
-			self.calculateResponse(image_name)
-
-			self.startTime = 0.0
-		else:
-			self.startTime = time.time()
-			self.isWrong = ''
-
-		img = img.Scale(NewW, NewH)
-		self.imageCtrl.SetBitmap(wx.BitmapFromImage(img))
-		self.mainSizer.Remove(0)
-		self.mainSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
-		self.Layout()
-		self.Refresh()
-
-	def setCurrentImage(self, image):
-		self.currentImage = image
-
-	def calculateResponse(self, img):
-
-		info = img.split('.')[0]
+	
+	def calculateResponse(self):
+		info = self.image_name.split('.')[0]
 		race, gender, expr, color = info.split('_')
 		response = (time.time() - self.startTime) * 1000
 		date = time.strftime(" %d/%m/%Y %H:%M:%S", time.localtime())
 		score_set = [date, race, gender, expr, color, self.firstResponse, response, self.isWrong]
 		self.score.append(score_set)
-
 
 	def calculateFirstResponse(self):
 		self.firstResponse = (time.time() - self.startTime) * 1000
@@ -191,119 +192,33 @@ class ViewerPanel(wx.Panel):
 		self.score = []
 
 
-class FormLatihan(wx.Panel):
+class FormLatihan(ImagePanel):
 	""""""
-
 	def __init__(self, parent):
 		"""Constructor"""
-		wx.Panel.__init__(self, parent)
-
-		self.widthDisp, self.heightDisp = wx.DisplaySize()
-
-		self.category = ''
-		print "frame size:", self.widthDisp, self.heightDisp
-
+		super(FormLatihan, self).__init__(parent)
 		self.img_latih_g_salah = 'images\Latihan_G_salah.jpeg'
 		self.img_latih_s_salah = 'images\Latihan_S_salah.jpeg'
 		self.img_latih_g = 'images\Latihan_G.jpeg'
 		self.img_latih_s = 'images\Latihan_S.jpeg'
-		self.images = []
 		self.currentImage = self.img_latih_g
-
-		self.totalPictures = 0
-
-		self.startTime = 0.0
-		self.responseTime = 0.0
-		self.score = []
-		self.isWrong = ''
 		self.layout()
 
-	def layout(self):
-		"""
-			Layout the widgets on the panel
-			"""
-		self.imgSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
-
-
-		self.mainSizer = wx.BoxSizer(wx.VERTICAL)
-
-		image = self.currentImage
-		image_name = os.path.basename(image)
-		img = wx.Image(image, wx.BITMAP_TYPE_ANY)
-
-		self.imageCtrl = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(img))
-		self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
-
-		self.imgSizer.Fit(self)
-		self.SetSizer(self.imgSizer)
+	def wrong_action(self, warna=None):
+		if warna == 'G':
+			image = self.img_latih_g_salah
+		elif warna == 'S':
+			image = self.img_latih_s_salah
+		else:
+			self.isWrong = 'SALAH'
+		if warna:
+			self.img = wx.Image(image, wx.BITMAP_TYPE_ANY)
 
 	def prepareImages(self):
 		self.images = [self.img_latih_g, self.img_latih_s] * 6
 		self.images = random.sample(self.images,12)
 		self.images.append(self.img_latih_g)
-		# self.currentImage = self.images.pop(self.images.index(random.choice(self.images)))
 		self.currentImage = self.images.pop(0)
-
-	def loadImage(self, action):
-		""""""
-		image = self.currentImage
-		image_name = os.path.basename(image)
-		img = wx.Image(image, wx.BITMAP_TYPE_ANY)
-
-		width = img.GetWidth()
-		height = img.GetHeight()
-
-		if self.heightDisp > height:
-			scale = self.heightDisp / float(height)
-		else:
-			scale = height / float(self.heightDisp)
-
-		NewW = 400
-		NewH = 400
-		if action is not None:
-
-			if action == 'PUSH':
-				print 'PUSH!'
-				if image_name.count('_G'):
-					image = self.img_latih_g_salah
-					# image = self.currentImage
-					image_name = os.path.basename(image)
-					img = wx.Image(image, wx.BITMAP_TYPE_ANY)
-
-				else:
-					self.textLabel = 'TARIK'
-
-					# self.currentImage = self.img_latih_g
-					NewW = 20
-					NewH = 20
-					self.currentImage = self.images.pop(0)
-			elif action == 'PULL':
-				print 'PULL!'
-				if image_name.count('_S'):
-					image = self.img_latih_s_salah
-					# image = self.currentImage
-					image_name = os.path.basename(image)
-					img = wx.Image(image, wx.BITMAP_TYPE_ANY)
-				else:
-					self.textLabel = 'DORONG'
-					# self.currentImage = self.img_latih_s
-					NewW = self.heightDisp
-					NewH = self.heightDisp
-					self.currentImage = self.images.pop(0)
-			print "img left:", len(self.images)
-		# else:
-		# 	self.currentImage = self.images.pop(self.images.index(random.choice(self.images)))
-		# 	image = self.currentImage
-		# 	img = wx.Image(image, wx.BITMAP_TYPE_ANY)
-		img = img.Scale(NewW, NewH)
-		self.imageCtrl.SetBitmap(wx.BitmapFromImage(img))
-		self.imgSizer.Remove(0)
-		self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
-		self.Layout()
-		self.Refresh()
-
-	def shouldStop(self):
-		return len(self.images) == 0
 
 
 class FormIdentitas(wx.Panel):
@@ -428,13 +343,13 @@ class ViewerFrame(wx.Frame):
 		"""Constructor"""
 		wx.Frame.__init__(self, None, wx.ID_ANY, title="Image Viewer")
 		self.formViewer = FormIdentitas(self)
-		self.mainViewer = ViewerPanel(self)
+		self.sesiPenilaian = FormPenilaian(self)
 		self.sesiJeda = FormJeda(self)
 		self.sesiLatihan = FormLatihan(self)
 
 		self.sesiLatihan.Hide()
 		self.sesiJeda.Hide()
-		self.mainViewer.Hide()
+		self.sesiPenilaian.Hide()
 		self.formViewer.Show()
 
 		self.folderPath = ""
@@ -442,7 +357,7 @@ class ViewerFrame(wx.Frame):
 		self.latihan = True
 		self.jenisJeda = 'INS1'  #[INS1|INS2|OPN|REST|END]
 		self.jumlahLatihan = 1
-		self.lockPanel = False
+		self.LOCK_PANEL = False
 		self.txtINS1 = "Kepada anda akan disajikan\nFoto-foto berwarna HITAM PUTIH dan SEPHIA\n\n\n\nTugas Anda adalah\nMENARIK joystick untuk foto HITAM PUTIH\nMENDORONG Joystick untuk foto SEPHIA\n\n\nPada saat MENARIK, foto akan membesar\nPada saat MENDORONG, foto akan mengecil\nAnda diminta untuk MENARIK/MENDORONG joystick hingga maksimal\n(Tidak dapat bergerak lagi)\n\n\nSetelah itu Anda diminta untuk mengembalikan joystick ke posisi tengah kembali dan\nfoto baru akan ditampilkan\n\n\n\nGeser joystick ke kanan untuk memulai"
 
 		self.txtINS2 = 'Berikut ini adalah sesi latihan\n\n\n\nKepada Anda akan disajikan foto pemandangan berwarna HITAM PUTIH dan SEPHIA\n\n\nTARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH\nDORONG joystick menjauhi tubuh jika yang tersaji adalah foto berwarna SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan \nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
@@ -459,7 +374,7 @@ class ViewerFrame(wx.Frame):
 		self.sesiJeda.WritePesan(self.txtINS1)
 		self.sizer = wx.BoxSizer(wx.VERTICAL)
 		self.sizer.Add(self.formViewer, 1, wx.EXPAND)
-		self.sizer.Add(self.mainViewer, 1, wx.EXPAND)
+		self.sizer.Add(self.sesiPenilaian, 1, wx.EXPAND)
 		self.sizer.Add(self.sesiJeda, 1, wx.EXPAND)
 		self.sizer.Add(self.sesiLatihan, 1, wx.EXPAND)
 		self.SetSizer(self.sizer)
@@ -473,6 +388,7 @@ class ViewerFrame(wx.Frame):
 		print "self.joystick", self.joystick
 		self.Bind(wx.EVT_JOY_MOVE, self.onMove)
 		self.JOY_DO_SOMETHING = True
+		self.NEUTRAL = True
 		pos = self.joystick.GetPosition()
 		x, y = pos
 		posx = (x - 32767) * 2 / 65535.
@@ -483,8 +399,8 @@ class ViewerFrame(wx.Frame):
 #----------------------------------------------------------------------
 	def onMove(self, event):
 		# Rules:
-		# 1. one panel only use one axis
-		# 2. whenever axis is moved make sure JOY_DO_SOMETHING is set to False
+		# 1. one panel only use one axis(LOCK_PANEL) this will prevent user to accidentally change session
+		# 2. whenever axis reach maximum position make sure JOY_DO_SOMETHING is set to False
 		# 3. whenever axis returns idle make sure JOY_DO_SOMETHING is set to True
 
 		# Normalize position in linux
@@ -492,16 +408,18 @@ class ViewerFrame(wx.Frame):
 		# posy = (float(y)-32767.0)/32767.0
 		pos = self.joystick.GetPosition()
 		x, y = pos
-		posx = self.dec((x - 32767) * 2 / 65535.).quantize(self.ONEPLACE)
-		posy = self.dec(-(y - 32767) * 2 / 65535.).quantize(self.ONEPLACE)
-
+		posx = self.dec((x - 32767) * 2 / 65535.).quantize(self.dec('0.01'), rounding='ROUND_HALF_UP')
+		posy = self.dec(-(y - 32767) * 2 / 65535.).quantize(self.dec('0.01'), rounding='ROUND_HALF_UP')
+		# the value considered as 'neutral'(center position).
+		# this cannot be exactly 0.0 as the x/y axis rarely have that value in neutral position
+		neutral = 0.2
 		print "pos:",posx, posy
 		if self.formViewer.IsShown():
-			if self.lockPanel:
+			if self.LOCK_PANEL:
 				# if abs(posx) <= 0.0001:
-				if posx == 0.0:
+				if posx <= neutral:
 					self.JOY_DO_SOMETHING = True
-					self.lockPanel = False
+					self.LOCK_PANEL = False
 				else:
 					pass
 			else:
@@ -509,25 +427,25 @@ class ViewerFrame(wx.Frame):
 					self.JOY_DO_SOMETHING = False
 					self.onSwitchPanels('jeda')
 		elif self.sesiLatihan.IsShown():
-			if self.lockPanel:
+			if self.LOCK_PANEL:
 				# if abs(posx) <= 0.0001:
-				if abs(posx) == 0.0:
+				if abs(posx) <= neutral:
 					self.JOY_DO_SOMETHING = True
-					self.lockPanel = False
-					print 'stat:', self.JOY_DO_SOMETHING, self.lockPanel, posx, posy
+					self.LOCK_PANEL = False
+					print 'stat:', self.JOY_DO_SOMETHING, self.LOCK_PANEL, posx, posy
 				else:
 					pass
 			else:
-				if posy >= .89 and self.JOY_DO_SOMETHING:
-					self.sesiLatihan.loadImage('PUSH')
+				if posy > neutral and self.JOY_DO_SOMETHING:
+					self.sesiLatihan.loadImage('PUSH', abs(posy))
 					print "posx,posy: ", posx, posy
-					self.JOY_DO_SOMETHING = False
-				elif posy <= -.89 and self.JOY_DO_SOMETHING:
-					self.sesiLatihan.loadImage('PULL')
+					self.JOY_DO_SOMETHING = False if posy >= .9 else True
+				elif posy < -1 * neutral and self.JOY_DO_SOMETHING:
+					self.sesiLatihan.loadImage('PULL', abs(posy))
 					print "posx,posy: ", posx, posy
-					self.JOY_DO_SOMETHING = False
+					self.JOY_DO_SOMETHING = False if posy <= -.9 else True
 				# elif (abs(posy) <= 0.01 ) and not self.JOY_DO_SOMETHING:
-				elif (abs(posy) == 0.0 ) and not self.JOY_DO_SOMETHING:
+				elif (abs(posy) <= neutral ) and not self.JOY_DO_SOMETHING:
 					print 'NEXT!'
 					print "posx,posy: ", posx, posy
 					if self.sesiLatihan.shouldStop():
@@ -536,46 +454,52 @@ class ViewerFrame(wx.Frame):
 						self.onSwitchPanels('jeda')
 
 					else:
-						self.sesiLatihan.loadImage(None)
+						self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
+						self.sesiLatihan.loadImage(None,None)
 					self.JOY_DO_SOMETHING = True
 				else:
 					pass
-		elif self.mainViewer.IsShown():
-			if self.lockPanel:
-				# if abs(posx) <= 0.0001:
-				if abs(posx) == 0.0:
+		elif self.sesiPenilaian.IsShown():
+			if self.LOCK_PANEL:
+				if abs(posx) <= neutral:
 					self.JOY_DO_SOMETHING = True
-					self.lockPanel = False
-					print 'stat:', self.JOY_DO_SOMETHING, self.lockPanel, posx, posy
+					self.LOCK_PANEL = False
+					# print 'stat:', self.JOY_DO_SOMETHING, self.LOCK_PANEL, posx, posy
 				else:
 					pass
 			else:
-				if posy >= .89 and self.JOY_DO_SOMETHING:
-					self.mainViewer.loadImage('PUSH')
-					print "posx,posy: ", posx, posy
-					self.JOY_DO_SOMETHING = False
-				elif posy <= -.89 and self.JOY_DO_SOMETHING:
-					self.mainViewer.loadImage('PULL')
-					print "posx,posy: ", posx, posy
-					self.JOY_DO_SOMETHING = False
-				elif abs(posy) > .3 and self.JOY_DO_SOMETHING:
-					self.mainViewer.calculateFirstResponse()
-				# elif (abs(posy) <= 0.01 ) and not self.JOY_DO_SOMETHING:
-				elif (abs(posy) == 0.0 ) and not self.JOY_DO_SOMETHING:
+				if abs(posy) > neutral and self.NEUTRAL:
+					self.sesiPenilaian.calculateFirstResponse()
 					self.JOY_DO_SOMETHING = True
-					if not self.mainViewer.shouldStop():
+					self.NEUTRAL = False
+				elif abs(posy) > .9 and self.JOY_DO_SOMETHING and not self.NEUTRAL:
+					self.sesiPenilaian.calculateResponse()
+					self.sesiPenilaian.startTime = 0.0
+				# Joystick moves and image is zoomed in/out
+				if posy > neutral and self.JOY_DO_SOMETHING:
+					self.sesiPenilaian.loadImage('PUSH', abs(posy))
+					# print "posx,posy: ", posx, posy
+					self.JOY_DO_SOMETHING = False if posy >= .9 else True
+				elif posy < -1 * neutral and self.JOY_DO_SOMETHING:
+					self.sesiPenilaian.loadImage('PULL', abs(posy))
+					# print "posx,posy: ", posx, posy
+					self.JOY_DO_SOMETHING = False if posy <= -.9 else True
+				# Joystick return to neutral position and the image state remain
+				elif (abs(posy) <= neutral ) and not self.JOY_DO_SOMETHING:
+					self.NEUTRAL = True
+					if not self.sesiPenilaian.shouldStop():
 						print 'NEXT!'
 						print "posx,posy: ", posx, posy
-						self.mainViewer.resetFirstResponse()
-						self.mainViewer.setCurrentImage(self.mainViewer.getRandomImage())
-						self.mainViewer.loadImage(None)
-					elif self.mainViewer.shouldStop():
+						self.sesiPenilaian.resetFirstResponse()
+						self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+						self.sesiPenilaian.loadImage(None, None)
+					elif self.sesiPenilaian.shouldStop():
 						print 'STOP!'
 						print "posx,posy: ", posx, posy
-						self.mainViewer.resetFirstResponse()
-						self.writeScore(self.mainViewer.getScore())
-						self.mainViewer.clearScore()
-						print "scoreIsClear:", len(self.mainViewer.getScore()) == 0
+						self.sesiPenilaian.resetFirstResponse()
+						self.writeScore(self.sesiPenilaian.getScore())
+						self.sesiPenilaian.clearScore()
+						print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
 						if self.wait:
 							self.jenisJeda = 'REST'
 							self.sesiJeda.WritePesan(self.txtREST)
@@ -591,24 +515,29 @@ class ViewerFrame(wx.Frame):
 			print self.jenisJeda
 			if posx >= 1.0 and self.JOY_DO_SOMETHING:
 				self.JOY_DO_SOMETHING = False
-				self.lockPanel = True
+				self.LOCK_PANEL = True
+				print "STAT:", self.jenisJeda
+				print "==========="
+				print "do something? ", self.JOY_DO_SOMETHING
+				print "panel locked? ", self.LOCK_PANEL
+				print "wait? ", self.wait
 				if self.jenisJeda == 'INS1':
 					self.sesiJeda.WritePesan(self.txtINS2)
 					self.onSwitchPanels('jeda')
 					self.jenisJeda = 'INS2'
 				elif self.jenisJeda == 'INS2':
-
 					self.onSwitchPanels('latihan')
 					self.sesiLatihan.prepareImages()
-					self.sesiLatihan.loadImage(None)
+					self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
+					self.sesiLatihan.loadImage(None,None)
 				elif self.jenisJeda == 'OPN':
 					self.onSwitchPanels('main')
 					data_responden = self.formViewer.getValues()
 					#responden.append('SESI 2')
-					self.mainViewer.setResponden(data_responden)
-					self.mainViewer.prepareImages()
-					self.mainViewer.setCurrentImage(self.mainViewer.getRandomImage())
-					self.mainViewer.loadImage(None)
+					self.sesiPenilaian.setResponden(data_responden)
+					self.sesiPenilaian.prepareImages()
+					self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+					self.sesiPenilaian.loadImage(None, None)
 				elif self.jenisJeda == 'REST':
 					self.jenisJeda = 'OPN'
 					self.sesiJeda.WritePesan(self.txtOPN)
@@ -618,14 +547,7 @@ class ViewerFrame(wx.Frame):
 					self.sesiJeda.WritePesan(self.txtINS1)
 					self.onSwitchPanels('menu')
 					self.wait = True
-					print "STAT:", self.jenisJeda
-					print "==========="
-					print "do something? ", self.JOY_DO_SOMETHING
-					print "panel locked? ", self.lockPanel
-					print "wait? ", self.wait
-
-			# elif posx <= 0.001 and not self.JOY_DO_SOMETHING:
-			elif posx == 0.0 and not self.JOY_DO_SOMETHING:
+			elif abs(posx) <= neutral and not self.JOY_DO_SOMETHING:
 				self.JOY_DO_SOMETHING = True
 			else:
 				pass
@@ -638,6 +560,17 @@ class ViewerFrame(wx.Frame):
 			print 'file name: ', file_name, data
 			valid_data = [x for x in data[2:] if x[7] == '' or x[6] > 200]
 			total_response = sum([x[6] for x in valid_data])
+			# Generate category and calculate average response time for each of them
+			categ_list = [x[3:5] for x in data[2:]]
+			categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
+			for c in categ:
+				categ_data = [i for i in data[2:] if i[3:5] == c]
+				categ_data_len = len(categ_data)
+				categ_tot_resp_awal = sum([i[5] for i in categ_data])
+				categ_tot_resp_akhir = sum([i[6] for i in categ_data])
+				categ_avg_resp_awal = float(categ_tot_resp_awal / categ_data_len)
+				categ_avg_resp_akhir = float(categ_tot_resp_akhir / categ_data_len)
+				data.append(['RERATA', 'UNTUK', 'KATEGORI', c[0], c[1], categ_avg_resp_awal, categ_avg_resp_akhir])
 			if len(valid_data):
 				avg = float(total_response) / float(len(valid_data))
 			else:
@@ -661,9 +594,9 @@ class ViewerFrame(wx.Frame):
 			self.formViewer.Hide()
 			self.sesiLatihan.Hide()
 			self.sesiJeda.Hide()
-			self.mainViewer.Show()
+			self.sesiPenilaian.Show()
 		elif window == 'jeda':
-			self.mainViewer.Hide()
+			self.sesiPenilaian.Hide()
 			self.formViewer.Hide()
 			self.sesiLatihan.Hide()
 			self.sesiJeda.Show()
@@ -671,17 +604,17 @@ class ViewerFrame(wx.Frame):
 			self.sesiJeda.Hide()
 			self.sesiLatihan.Show()
 			self.formViewer.Hide()
-			self.mainViewer.Hide()
+			self.sesiPenilaian.Hide()
 		elif window == 'menu':
 			self.sesiJeda.Hide()
 			self.sesiLatihan.Hide()
-			self.mainViewer.Hide()
+			self.sesiPenilaian.Hide()
 			self.formViewer.Show()
 		else:
 			self.sesiJeda.Show()
 			self.sesiJeda.Hide()
 			self.formViewer.Hide()
-			self.mainViewer.Hide()
+			self.sesiPenilaian.Hide()
 			self.sesiLatihan.Hide()
 			self.wait = True
 		self.Update()
