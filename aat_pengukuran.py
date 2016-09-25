@@ -501,15 +501,9 @@ class ViewerFrame(wx.Frame):
                         self.writeScore(self.sesiPenilaian.getScore())
                         self.sesiPenilaian.clearScore()
                         print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                        if self.wait:
-                            self.jenisJeda = 'REST'
-                            self.sesiJeda.WritePesan(self.txtREST)
-                            self.onSwitchPanels('jeda')
-                            self.wait = False
-                        else:
-                            self.sesiJeda.WritePesan(self.txtEND)
-                            self.onSwitchPanels('jeda')
-                            self.jenisJeda = 'END'
+                        self.sesiJeda.WritePesan(self.txtEND)
+                        self.onSwitchPanels('jeda')
+                        self.sesiJeda = 'END'
                 else:
                     pass
         elif self.sesiJeda.IsShown():
