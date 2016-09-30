@@ -117,6 +117,7 @@ class FormPenilaian(ImagePanel):
         self.startTime = time.time()
         self.score = []
         self.DONE = False
+        self.wrongImages = []
 
     def wrong_action(self, warna=None):
         if warna:
@@ -404,10 +405,6 @@ class ViewerFrame(wx.Frame):
         self.Bind(wx.EVT_JOY_MOVE, self.onMove)
         self.JOY_DO_SOMETHING = True
         self.NEUTRAL = True
-        pos = self.joystick.GetPosition()
-        x, y = pos
-        posx = (x - 32767) * 2 / 65535.
-        posy = -(y - 32767) * 2 / 65535.  #posy = (float(y)-32767.0)/32767.0
 
     def onMove(self, event):
         # Rules:
@@ -430,7 +427,6 @@ class ViewerFrame(wx.Frame):
 
         if self.formIdentitas.IsShown():
             if self.LOCK_PANEL:
-                # if abs(posx) <= 0.0001:
                 if posx <= neutral:
                     self.JOY_DO_SOMETHING = True
                     self.LOCK_PANEL = False
@@ -446,11 +442,9 @@ class ViewerFrame(wx.Frame):
                         self.onSwitchPanels('jeda')
         elif self.sesiLatihan.IsShown():
             if self.LOCK_PANEL:
-                # if abs(posx) <= 0.0001:
                 if abs(posx) <= neutral:
                     self.JOY_DO_SOMETHING = True
                     self.LOCK_PANEL = False
-                    # print 'stut:', self.JOY_DO_SOMETHING, self.LOCK_PANEL, posx, posy
                 else:
                     pass
             else:
@@ -490,7 +484,6 @@ class ViewerFrame(wx.Frame):
                 if abs(posx) <= neutral:
                     self.JOY_DO_SOMETHING = True
                     self.LOCK_PANEL = False
-                    # print 'stat:', self.JOY_DO_SOMETHING, self.LOCK_PANEL, posx, posy
                 else:
                     pass
             else:
@@ -506,7 +499,6 @@ class ViewerFrame(wx.Frame):
                         scale = 1.0
                     assert not self.NEUTRAL
                     self.sesiPenilaian.loadImage('PUSH', scale)
-                    # print "posx,posy: ", posx, posy
                 elif posy < -neutral and self.JOY_DO_SOMETHING:
                     self.JOY_DO_SOMETHING = False if posy <= -full else True
                     scale = abs(posy)
@@ -515,7 +507,6 @@ class ViewerFrame(wx.Frame):
                         scale = 1.0
                     assert not self.NEUTRAL
                     self.sesiPenilaian.loadImage('PULL', scale)
-                    # print "posx,posy: ", posx, posy
                 elif (abs(posy) <= neutral ) and self.JOY_DO_SOMETHING:
                     # When joystick return to normal position before fully push/pull return image to original size
                     self.sesiPenilaian.loadImage(None, 0)
@@ -524,24 +515,37 @@ class ViewerFrame(wx.Frame):
                     self.JOY_DO_SOMETHING = True
                     if not self.sesiPenilaian.shouldStop():
                         print 'NEXT!', posx, posy, abs(posy)
+                        if self.sesiPenilaian.isWrong:
+                            self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.currentImage)
                         self.sesiPenilaian.resetFirstResponse()
                         self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
                         self.sesiPenilaian.loadImage(None, 0)
                         self.sesiPenilaian.startTime = time.time()
                     elif self.sesiPenilaian.shouldStop():
                         self.sesiPenilaian.resetFirstResponse()
-                        self.writeScore(self.sesiPenilaian.getScore())
-                        self.sesiPenilaian.clearScore()
-                        print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                        if self.wait:
-                            self.jenisJeda = 'REST'
-                            self.sesiJeda.WritePesan(self.txtREST)
-                            self.onSwitchPanels('jeda')
-                            self.wait = False
+                        jumlah_salah = len(self.sesiPenilaian.wrongImages)
+                        if jumlah_salah > 10:
+                            print '===============REMEDIAL==============='
+                            print 'Jumlah Salah:', jumlah_salah
+                            self.sesiPenilaian.images.extend(self.sesiPenilaian.wrongImages)
+                            self.sesiPenilaian.wrongImages = []
+                            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+                            self.sesiPenilaian.loadImage(None, 0)
+                            self.sesiPenilaian.startTime = time.time()
                         else:
-                            self.sesiJeda.WritePesan(self.txtEND)
-                            self.onSwitchPanels('jeda')
-                            self.jenisJeda = 'END'
+                            self.writeScore(self.sesiPenilaian.getScore())
+                            self.sesiPenilaian.clearScore()
+                            self.sesiPenilaian.wrongImages = []
+                            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
+                            if self.wait:
+                                self.jenisJeda = 'REST'
+                                self.sesiJeda.WritePesan(self.txtREST)
+                                self.onSwitchPanels('jeda')
+                                self.wait = False
+                            else:
+                                self.sesiJeda.WritePesan(self.txtEND)
+                                self.onSwitchPanels('jeda')
+                                self.jenisJeda = 'END'
                 else:
                     pass
         elif self.sesiJeda.IsShown():
@@ -591,7 +595,6 @@ class ViewerFrame(wx.Frame):
         if len(data):
             file_name = 'hasil/' + '_'.join(data[0][1:]) + '.csv'  #nama_id.csv
             print 'file name: ', file_name, data
-            assert len(data[2:]) == 20
             valid_data = [x for x in data[2:] if x[7] == '' or x[6] > 200]
             total_response = sum([x[6] for x in valid_data])
             # Generate category and calculate average response time for each of them

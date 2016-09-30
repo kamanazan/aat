@@ -117,6 +117,7 @@ class FormPenilaian(ImagePanel):
         self.startTime = time.time()
         self.score = []
         self.DONE = False
+        self.wrongImages = []
 
     def wrong_action(self, warna=None):
         if warna:
@@ -492,18 +493,31 @@ class ViewerFrame(wx.Frame):
                     self.JOY_DO_SOMETHING = True
                     if not self.sesiPenilaian.shouldStop():
                         print 'NEXT!', posx, posy, abs(posy)
+                        if self.sesiPenilaian.isWrong:
+                            self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.currentImage)
                         self.sesiPenilaian.resetFirstResponse()
                         self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
                         self.sesiPenilaian.loadImage(None, 0)
                         self.sesiPenilaian.startTime = time.time()
                     elif self.sesiPenilaian.shouldStop():
                         self.sesiPenilaian.resetFirstResponse()
-                        self.writeScore(self.sesiPenilaian.getScore())
-                        self.sesiPenilaian.clearScore()
-                        print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                        self.sesiJeda.WritePesan(self.txtEND)
-                        self.onSwitchPanels('jeda')
-                        self.sesiJeda = 'END'
+                        jumlah_salah = len(self.sesiPenilaian.wrongImages)
+                        if jumlah_salah > 10:
+                            print '===============REMEDIAL==============='
+                            print 'Jumlah Salah:', jumlah_salah
+                            self.sesiPenilaian.images.extend(self.sesiPenilaian.wrongImages)
+                            self.sesiPenilaian.wrongImages = []
+                            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+                            self.sesiPenilaian.loadImage(None, 0)
+                            self.sesiPenilaian.startTime = time.time()
+                        else:
+                            self.writeScore(self.sesiPenilaian.getScore())
+                            self.sesiPenilaian.clearScore()
+                            self.sesiPenilaian.wrongImages = []
+                            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
+                            self.sesiJeda.WritePesan(self.txtEND)
+                            self.onSwitchPanels('jeda')
+                            self.jenisJeda = 'END'
                 else:
                     pass
         elif self.sesiJeda.IsShown():
@@ -553,7 +567,6 @@ class ViewerFrame(wx.Frame):
         if len(data):
             file_name = 'hasil/' + '_'.join(data[0][1:]) + '.csv'  #nama_id.csv
             print 'file name: ', file_name, data
-            assert len(data[2:]) == 192
             valid_data = [x for x in data[2:] if x[7] == '' or x[6] > 200]
             total_response = sum([x[6] for x in valid_data])
             # Generate category and calculate average response time for each of them
@@ -572,10 +585,6 @@ class ViewerFrame(wx.Frame):
             else:
                 avg = 0.0
             data.append(['RERATA:', avg])
-            if self.wait:
-                data[0].append('SESI 1')
-            else:
-                data[0].append('SESI 2')
             print data
             with open(file_name, 'ab') as csvfile:
                 scorewriter = csv.writer(csvfile)
