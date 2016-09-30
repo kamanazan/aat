@@ -192,7 +192,8 @@ class FormPenilaian(ImagePanel):
     def setResponden(self, responden_data):
         self.category = responden_data[-1]
         self.score.append(responden_data)
-        self.score.append(['TGL', 'RAS', 'GENDER', 'EKSPRESI', 'WARNA', 'RESPON AWAL', 'RESPON AKHIR', 'KET'])
+        self.score.append(['TGL', 'RAS', 'GENDER', 'EKSPRESI', 'WARNA', 'RESPON AWAL(REACTION TIME)(ms)',
+                           'RESPON AKHIR(RESPONSE TIME)(ms)', 'KET'])
 
     def calculateResponse(self):
         info = self.image_name.split('.')[0]
@@ -589,6 +590,20 @@ class ViewerFrame(wx.Frame):
                 pass
 
     def writeScore(self, data):
+        '''
+        :param data:
+        data[0] -> (list) identitas peserta
+        data[1] -> (list) nama kolom
+        data[2:] -> data hasil pengujian dengan format:
+                    0: timestamp
+                    1: ras
+                    2: gender
+                    3: ekspresi
+                    4: warna
+                    5: respon awal
+                    6: respon akhir
+                    7: keterangan('SALAH' kalo aksi tidak sesuai warna gambar, '' kalo benar)
+        '''
         if not os.path.exists('hasil'):
             os.makedirs('hasil')
         if len(data):
@@ -597,16 +612,43 @@ class ViewerFrame(wx.Frame):
             valid_data = [x for x in data[2:] if x[7] == '' or x[6] > 200]
             total_response = sum([x[6] for x in valid_data])
             # Generate category and calculate average response time for each of them
-            categ_list = [x[3:5] for x in data[2:]]
+            # ekspresi dan warna
+            categ_list = [x[3:5] for x in valid_data]
             categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
             for c in categ:
-                categ_data = [i for i in data[2:] if i[3:5] == c]
+                categ_data = [i for i in valid_data if i[3:5] == c]
                 categ_data_len = len(categ_data)
                 categ_tot_resp_awal = sum([i[5] for i in categ_data])
                 categ_tot_resp_akhir = sum([i[6] for i in categ_data])
-                categ_avg_resp_awal = float(categ_tot_resp_awal / categ_data_len)
-                categ_avg_resp_akhir = float(categ_tot_resp_akhir / categ_data_len)
+                categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
+                categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
                 data.append(['RERATA', 'UNTUK', 'KATEGORI', c[0], c[1], categ_avg_resp_awal, categ_avg_resp_akhir])
+            # ras
+            categ_ras_i = [c for c in valid_data if c[1] == 'I']
+            categ_ras_c = [c for c in valid_data if c[1] == 'C']
+            len_i = len(categ_ras_i)
+            len_c = len(categ_ras_c)
+            ras_i_tot_resp_awal = sum([i[5] for i in categ_ras_i])
+            ras_c_tot_resp_awal = sum([i[5] for i in categ_ras_c])
+            ras_i_tot_resp_akhir = sum([i[6] for i in categ_ras_i])
+            ras_c_tot_resp_akhir = sum([i[6] for i in categ_ras_c])
+            ras_i_avg_resp_awal = float(ras_i_tot_resp_awal) / float(len_i)
+            ras_c_avg_resp_awal = float(ras_c_tot_resp_awal) / float(len_c)
+            ras_i_avg_resp_akhir = float(ras_i_tot_resp_akhir) / float(len_i)
+            ras_c_avg_resp_akhir = float(ras_c_tot_resp_akhir) / float(len_c)
+            data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'I', ras_i_avg_resp_awal, ras_i_avg_resp_akhir])
+            data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'C', ras_c_avg_resp_awal, ras_c_avg_resp_akhir])
+            # ras ekspresi kelamin
+            categ_list = [[x[1], x[3], x[2][0]] for x in valid_data]
+            categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
+            for c in categ:
+                categ_data = [i for i in valid_data if i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1]]
+                categ_data_len = len(categ_data)
+                categ_tot_resp_awal = sum([i[5] for i in categ_data])
+                categ_tot_resp_akhir = sum([i[6] for i in categ_data])
+                categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
+                categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
+                data.append(['RERATA', 'UNTUK', c[0], c[1], c[2], categ_avg_resp_awal, categ_avg_resp_akhir])
             if len(valid_data):
                 avg = float(total_response) / float(len(valid_data))
             else:
