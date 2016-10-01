@@ -114,7 +114,7 @@ class FormPenilaian(ImagePanel):
         super(FormPenilaian, self).__init__(parent)
         self.category = ''
         self.firstResponse = 0.0
-        self.startTime = time.time()
+        self.startTime = 0
         self.score = []
         self.DONE = False
         self.wrongImages = []
@@ -327,6 +327,93 @@ class FormJeda(wx.Panel):
         self.title.SetLabel(msg)
 
 
+class FormContoh(wx.Panel):
+
+    def __init__(self, parent):
+        # Add a panel so it looks correct on all platforms
+        wx.Panel.__init__(self, parent)
+
+        self.pesan_contoh1 = 'Contoh Foto Sephia'
+        self.pesan_contoh2 = 'Contoh Foto Hitam Putih'
+        self.pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
+        font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        self.title1 = wx.StaticText(self, wx.ID_ANY, label=self.pesan_contoh1, style=wx.ALIGN_CENTER)
+        self.title2 = wx.StaticText(self, wx.ID_ANY, label=self.pesan_contoh2, style=wx.ALIGN_CENTER)
+        self.title3 = wx.StaticText(self, wx.ID_ANY, label=self.pesan_next, style=wx.ALIGN_CENTER)
+        self.title1.SetFont(font)
+        self.title2.SetFont(font)
+        self.title3.SetFont(font)
+
+        self.imgs = wx.Image('images/I_F02_Neutral_S.jpg', wx.BITMAP_TYPE_ANY).Scale(400,400)
+        self.imgg = wx.Image('images/I_F02_Neutral_G.jpg', wx.BITMAP_TYPE_ANY).Scale(400,400)
+        self.imageCtrls = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.imgs), style=wx.ALIGN_BOTTOM)
+        self.imageCtrlg = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.imgg), style=wx.ALIGN_CENTER)
+
+        foto1 = wx.BoxSizer(wx.VERTICAL)
+        foto2 = wx.BoxSizer(wx.VERTICAL)
+        tmpsizer = wx.BoxSizer(wx.VERTICAL)
+        fotoSizer = wx.BoxSizer()
+        sizer = wx.GridSizer(rows=1, cols=1)
+
+        foto1.Add(self.title1, 0, wx.ALIGN_CENTER, 0)
+        foto1.Add((10,10))
+        foto2.Add(self.title2, 0, wx.ALIGN_CENTER, 0)
+        foto2.Add((10,10))
+        foto1.Add(self.imageCtrls, 0, wx.ALIGN_CENTER, 0)
+        foto2.Add(self.imageCtrlg, 0, wx.ALIGN_CENTER, 0)
+        fotoSizer.Add(foto1,0, wx.ALIGN_CENTER, 0)
+        fotoSizer.Add((20,20))
+        fotoSizer.Add(foto2,0, wx.ALIGN_CENTER, 0)
+        tmpsizer.Add(fotoSizer,0, wx.ALIGN_CENTER, 0)
+        tmpsizer.Add((30,30))
+        tmpsizer.Add(self.title3, 0, wx.ALIGN_CENTER, 0)
+        sizer.Add(tmpsizer, 0, wx.ALIGN_CENTER,0)
+        self.SetSizer(sizer)
+        sizer.Fit(self)
+        self.Layout()
+        self.Refresh()
+
+
+class FormContohSalah(wx.Panel):
+    def __init__(self, parent):
+        # Add a panel so it looks correct on all platforms
+        wx.Panel.__init__(self, parent)
+
+        self.pesan1 = 'Jika terdapat tanda "X" warna merah seperti ini:\n'
+        self.pesan2 = """
+
+
+
+artinya, Anda keliru dalam MENARIK / MENDORONG.
+Ingat, TARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH
+dan
+DORONG joystick mendekati tubuh jika yang tersaji adalah foto berwarna SEPHIA."""
+        self.pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
+        font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        font_big = wx.Font(256, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        self.title1 = wx.StaticText(self, wx.ID_ANY, label=self.pesan1, style=wx.ALIGN_CENTER)
+        self.title2 = wx.StaticText(self, wx.ID_ANY, label=self.pesan2, style=wx.ALIGN_CENTER)
+        self.title3 = wx.StaticText(self, wx.ID_ANY, label='X', style=wx.ALIGN_CENTER)
+        self.title4 = wx.StaticText(self, wx.ID_ANY, label=self.pesan_next, style=wx.ALIGN_CENTER)
+        self.title1.SetFont(font)
+        self.title2.SetFont(font)
+        self.title4.SetFont(font)
+        self.title3.SetFont(font_big)
+        self.title3.SetForegroundColour((255,0,0))
+
+        titleSizer = wx.GridSizer(rows=4, cols=1, vgap=10)
+
+        titleSizer.Add(self.title1, 0, wx.ALIGN_CENTER, 0)
+        titleSizer.Add(self.title3, 0, wx.ALIGN_CENTER, 0)
+        titleSizer.Add(self.title2, 0, wx.ALIGN_CENTER, 0)
+        titleSizer.Add(self.title4, 0, wx.ALIGN_CENTER, 0)
+
+        self.SetSizer(titleSizer)
+        titleSizer.Fit(self)
+        self.Layout()
+        self.Refresh()
+
+
 class ViewerFrame(wx.Frame):
     """"""
     def __init__(self):
@@ -336,7 +423,10 @@ class ViewerFrame(wx.Frame):
         self.sesiPenilaian = FormPenilaian(self)
         self.sesiJeda = FormJeda(self)
         self.sesiLatihan = FormLatihan(self)
-
+        self.contohGambar = FormContoh(self)
+        self.contohSalah = FormContohSalah(self)
+        self.contohGambar.Hide()
+        self.contohSalah.Hide()
         self.sesiLatihan.Hide()
         self.sesiJeda.Hide()
         self.sesiPenilaian.Hide()
@@ -349,11 +439,9 @@ class ViewerFrame(wx.Frame):
         self.jenisJeda = 'INS1'  #[INS1|INS2|OPN|REST|END]
         self.jumlahLatihan = 1
         self.LOCK_PANEL = False
-        self.txtINS1 = "Kepada anda akan disajikan\nFoto-foto berwarna HITAM PUTIH dan SEPHIA\n\n\n\nTugas Anda adalah\nMENARIK joystick untuk foto HITAM PUTIH\nMENDORONG Joystick untuk foto SEPHIA\n\n\nPada saat MENARIK, foto akan membesar\nPada saat MENDORONG, foto akan mengecil\nAnda diminta untuk MENARIK/MENDORONG joystick hingga maksimal\n(Tidak dapat bergerak lagi)\n\n\nSetelah itu Anda diminta untuk mengembalikan joystick ke posisi tengah kembali dan\nfoto baru akan ditampilkan\n\n\n\nGeser joystick ke kanan untuk memulai"
-
-        self.txtINS2 = 'Berikut ini adalah sesi latihan\n\n\n\nKepada Anda akan disajikan foto pemandangan berwarna HITAM PUTIH dan SEPHIA\n\n\nTARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH\nDORONG joystick menjauhi tubuh jika yang tersaji adalah foto berwarna SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan \nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
-
-        self.txtOPN = 'Berikut ini adalah sesi program\n\n\n\nTARIK joystick untuk gambar HITAM PUTIH\nDORONG joystick untuk gambar SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan\nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
+        self.txtINS1 = "Kepada anda akan disajikan\nFoto-foto berwarna HITAM PUTIH dan SEPHIA\n\n\n\nTugas Anda adalah\nMENARIK joystick untuk foto HITAM PUTIH\nMENDORONG Joystick untuk foto SEPHIA\n\n\nPada saat MENARIK, foto akan membesar\nPada saat MENDORONG, foto akan mengecil dan menghilang\nAnda diminta untuk MENARIK/MENDORONG joystick hingga maksimal\n(Tidak dapat bergerak lagi)\n\n\nSetelah itu Anda diminta untuk mengembalikan joystick ke posisi tengah kembali dan\nfoto baru akan ditampilkan\n\n\n\nGeser joystick ke kanan untuk memulai"
+        self.txtINS2 = 'Berikut ini adalah sesi latihan\n\n\n\nKepada Anda akan disajikan foto pemandangan berwarna HITAM PUTIH dan SEPHIA\n\n\nTARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH\nDORONG joystick menjauhi tubuh jika yang tersaji adalah foto berwarna SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan \nMENGEMBALIKAN joystick ke posisi tengah dan akan ditampilkan foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
+        self.txtOPN = 'Berikut ini adalah sesi program\n\n\n\nTARIK joystick untuk foto HITAM PUTIH\nDORONG joystick untuk foto SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan\nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
 
         self.txtREST = ['SESI 1 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya',
                         'SESI 2 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya']
@@ -366,6 +454,8 @@ class ViewerFrame(wx.Frame):
         self.sesiJeda.WritePesan(self.txtINS1)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.formIdentitas, 1, wx.EXPAND)
+        self.sizer.Add(self.contohGambar, 1, wx.EXPAND)
+        self.sizer.Add(self.contohSalah, 1, wx.EXPAND)
         self.sizer.Add(self.sesiPenilaian, 1, wx.EXPAND)
         self.sizer.Add(self.sesiJeda, 1, wx.EXPAND)
         self.sizer.Add(self.sesiLatihan, 1, wx.EXPAND)
@@ -462,7 +552,7 @@ class ViewerFrame(wx.Frame):
                 if abs(posx) <= neutral:
                     self.JOY_DO_SOMETHING = True
                     self.LOCK_PANEL = False
-                    # print 'stat:', self.JOY_DO_SOMETHING, self.LOCK_PANEL, posx, posy
+                    self.sesiPenilaian.startTime = time.time()
                 else:
                     pass
             else:
@@ -543,14 +633,9 @@ class ViewerFrame(wx.Frame):
                 print "panel locked? ", self.LOCK_PANEL
                 print "wait? ", self.wait
                 if self.jenisJeda == 'INS1':
-                    self.sesiJeda.WritePesan(self.txtINS2)
-                    self.onSwitchPanels('jeda')
-                    self.jenisJeda = 'INS2'
+                    self.onSwitchPanels('contoh')
                 elif self.jenisJeda == 'INS2':
-                    self.onSwitchPanels('latihan')
-                    self.sesiLatihan.prepareImages()
-                    self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
-                    self.sesiLatihan.loadImage(None,0)
+                    self.onSwitchPanels('salah')
                 elif self.jenisJeda == 'OPN':
                     self.onSwitchPanels('main')
                     data_responden = self.formIdentitas.getValues()
@@ -572,6 +657,29 @@ class ViewerFrame(wx.Frame):
                 self.JOY_DO_SOMETHING = True
             else:
                 pass
+        elif self.contohGambar.IsShown():
+            if self.LOCK_PANEL:
+                if abs(posx) <= neutral:
+                    self.JOY_DO_SOMETHING = True
+                    self.LOCK_PANEL = False
+                else:
+                    pass
+            elif posx >= full and self.JOY_DO_SOMETHING:
+                self.sesiJeda.WritePesan(self.txtINS2)
+                self.onSwitchPanels('jeda')
+                self.jenisJeda = 'INS2'
+        elif self.contohSalah.IsShown():
+            if self.LOCK_PANEL:
+                if abs(posx) <= neutral:
+                    self.JOY_DO_SOMETHING = True
+                    self.LOCK_PANEL = False
+                else:
+                    pass
+            elif posx >= full and self.JOY_DO_SOMETHING:
+                self.onSwitchPanels('latihan')
+                self.sesiLatihan.prepareImages()
+                self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
+                self.sesiLatihan.loadImage(None,0)
 
     def writeScore(self, data):
         '''
@@ -652,22 +760,44 @@ class ViewerFrame(wx.Frame):
             self.formIdentitas.Hide()
             self.sesiLatihan.Hide()
             self.sesiJeda.Hide()
+            self.contohGambar.Hide()
+            self.contohSalah.Hide()
             self.sesiPenilaian.Show()
         elif window == 'jeda':
             self.sesiPenilaian.Hide()
             self.formIdentitas.Hide()
             self.sesiLatihan.Hide()
+            self.contohGambar.Hide()
+            self.contohSalah.Hide()
             self.sesiJeda.Show()
         elif window == 'latihan':
             self.sesiJeda.Hide()
             self.sesiLatihan.Show()
             self.formIdentitas.Hide()
             self.sesiPenilaian.Hide()
+            self.contohGambar.Hide()
+            self.contohSalah.Hide()
         elif window == 'menu':
             self.sesiJeda.Hide()
             self.sesiLatihan.Hide()
             self.sesiPenilaian.Hide()
+            self.contohGambar.Hide()
+            self.contohSalah.Hide()
             self.formIdentitas.Show()
+        elif window == 'contoh':
+            self.sesiJeda.Hide()
+            self.contohSalah.Hide()
+            self.sesiLatihan.Hide()
+            self.sesiPenilaian.Hide()
+            self.formIdentitas.Hide()
+            self.contohGambar.Show()
+        elif window == 'salah':
+            self.sesiJeda.Hide()
+            self.contohGambar.Hide()
+            self.sesiLatihan.Hide()
+            self.sesiPenilaian.Hide()
+            self.formIdentitas.Hide()
+            self.contohSalah.Show()
         else:
             self.sesiJeda.Show()
             self.sesiJeda.Hide()
