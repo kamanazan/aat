@@ -343,6 +343,7 @@ class ViewerFrame(wx.Frame):
         self.formIdentitas.Show()
 
         self.folderPath = ""
+        self.sesi = 1
         self.wait = True
         self.latihan = True
         self.jenisJeda = 'INS1'  #[INS1|INS2|OPN|REST|END]
@@ -354,7 +355,8 @@ class ViewerFrame(wx.Frame):
 
         self.txtOPN = 'Berikut ini adalah sesi program\n\n\n\nTARIK joystick untuk gambar HITAM PUTIH\nDORONG joystick untuk gambar SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan\nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
 
-        self.txtREST = 'SESI 1 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya'
+        self.txtREST = ['SESI 1 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya',
+                        'SESI 2 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya']
 
         self.txtEND = 'Sesi program telah selesai\n\n\nTerima kasih atas partisipasi anda'
 
@@ -516,9 +518,18 @@ class ViewerFrame(wx.Frame):
                             self.sesiPenilaian.clearScore()
                             self.sesiPenilaian.wrongImages = []
                             print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                            self.sesiJeda.WritePesan(self.txtEND)
-                            self.onSwitchPanels('jeda')
-                            self.jenisJeda = 'END'
+                            if self.sesi == 3:
+                                self.sesi = 1
+                                self.sesiJeda.WritePesan(self.txtEND)
+                                self.onSwitchPanels('jeda')
+                                self.jenisJeda = 'END'
+                            else:
+                                self.jenisJeda = 'REST'
+                                self.sesiJeda.WritePesan(self.txtREST[self.sesi-1])
+                                self.sesi += 1
+                                self.onSwitchPanels('jeda')
+
+
                 else:
                     pass
         elif self.sesiJeda.IsShown():
@@ -627,6 +638,7 @@ class ViewerFrame(wx.Frame):
             else:
                 avg = 0.0
             data.append(['RERATA:', avg])
+            data[0].append('SESI %d' % self.sesi)
             print data
             with open(file_name, 'ab') as csvfile:
                 scorewriter = csv.writer(csvfile)
