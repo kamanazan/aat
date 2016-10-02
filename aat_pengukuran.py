@@ -344,8 +344,8 @@ class FormContoh(wx.Panel):
         self.title2.SetFont(font)
         self.title3.SetFont(font)
 
-        self.imgs = wx.Image('images/I_F02_Neutral_S.jpg', wx.BITMAP_TYPE_ANY).Scale(400,400)
-        self.imgg = wx.Image('images/I_F02_Neutral_G.jpg', wx.BITMAP_TYPE_ANY).Scale(400,400)
+        self.imgs = wx.Image('images/Latihan_S.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
+        self.imgg = wx.Image('images/Latihan_G.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
         self.imageCtrls = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.imgs), style=wx.ALIGN_BOTTOM)
         self.imageCtrlg = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.imgg), style=wx.ALIGN_CENTER)
 
@@ -501,7 +501,7 @@ class ViewerFrame(wx.Frame):
             else:
                 if posx >= full:
                     data = self.formIdentitas.getValues()
-                    if all(not x for x in data[1:]):
+                    if any(not x for x in data[1:]):
                         self.formIdentitas.title.SetLabel('DATA TIDAK LENGKAP')
                     else:
                         self.JOY_DO_SOMETHING = False
@@ -665,6 +665,7 @@ class ViewerFrame(wx.Frame):
                 else:
                     pass
             elif posx >= full and self.JOY_DO_SOMETHING:
+                self.JOY_DO_SOMETHING = False
                 self.sesiJeda.WritePesan(self.txtINS2)
                 self.onSwitchPanels('jeda')
                 self.jenisJeda = 'INS2'
@@ -676,6 +677,7 @@ class ViewerFrame(wx.Frame):
                 else:
                     pass
             elif posx >= full and self.JOY_DO_SOMETHING:
+                self.JOY_DO_SOMETHING = False
                 self.onSwitchPanels('latihan')
                 self.sesiLatihan.prepareImages()
                 self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
@@ -730,7 +732,7 @@ class ViewerFrame(wx.Frame):
             ras_c_avg_resp_akhir = float(ras_c_tot_resp_akhir) / float(len_c)
             data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'I', ras_i_avg_resp_awal, ras_i_avg_resp_akhir])
             data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'C', ras_c_avg_resp_awal, ras_c_avg_resp_akhir])
-            # ras ekspresi kelamin
+            # ras ekspresi gender
             categ_list = [[x[1], x[3], x[2][0]] for x in valid_data]
             categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
             for c in categ:
@@ -741,11 +743,23 @@ class ViewerFrame(wx.Frame):
                 categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
                 categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
                 data.append(['RERATA', 'UNTUK', c[0], c[1], c[2], categ_avg_resp_awal, categ_avg_resp_akhir])
+            # ras ekspresi gender warna
+            categ_list = [[x[1], x[3], x[2][0], x[4]] for x in valid_data]
+            categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
+            for c in categ:
+                categ_data = [i for i in valid_data if
+                              i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1] and i[4] == c[3]]
+                categ_data_len = len(categ_data)
+                categ_tot_resp_awal = sum([i[5] for i in categ_data])
+                categ_tot_resp_akhir = sum([i[6] for i in categ_data])
+                categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
+                categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
+                data.append(['RERATA UNTUK', c[0], c[1], c[2], c[3], categ_avg_resp_awal, categ_avg_resp_akhir])
             if len(valid_data):
                 avg = float(total_response) / float(len(valid_data))
             else:
                 avg = 0.0
-            data.append(['RERATA:', avg])
+            data.append(['RERATA KESELURUHAN:', avg])
             data[0].append('SESI %d' % self.sesi)
             print data
             with open(file_name, 'ab') as csvfile:
