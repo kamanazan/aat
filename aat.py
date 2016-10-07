@@ -528,7 +528,7 @@ class ViewerFrame(wx.Frame):
             else:
                 if posx >= full:
                     data = self.formIdentitas.getValues()
-                    if all(not x for x in data[1:]):
+                    if any(not x for x in data[1:]):
                         self.formIdentitas.title.SetLabel('DATA TIDAK LENGKAP')
                     else:
                         self.JOY_DO_SOMETHING = False
