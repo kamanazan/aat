@@ -155,11 +155,11 @@ class FormPenilaian(ImagePanel):
             image_list_happy = [img for img in image_list if img.count('Happy')]
             image_list_neutral = [img for img in image_list if img.count('Neutral')]
 
-            img_g_happy = [face for face in image_list_happy if face.count('_G')] * 11
-            img_s_happy = [face for face in image_list_happy if face.count('_S')] * 1
+            img_g_happy = [face for face in image_list_happy if face.count('_G')] * 2
+            img_s_happy = [face for face in image_list_happy if face.count('_S')] * 2
 
-            img_g_neutral = [face for face in image_list_neutral if face.count('_G')] * 1
-            img_s_neutral = [face for face in image_list_neutral if face.count('_S')] * 11
+            img_g_neutral = [face for face in image_list_neutral if face.count('_G')] * 2
+            img_s_neutral = [face for face in image_list_neutral if face.count('_S')] * 2
 
             print "Happy : ", len(image_list_happy)
             print "detail "
@@ -187,7 +187,7 @@ class FormPenilaian(ImagePanel):
         random.shuffle(image_used)
         # image_used = image_bw_list
         print "jumlah foto: ", len(image_used)
-        self.images = image_used[:10]  # tsting only
+        self.images = image_used
 
     def setResponden(self, responden_data):
         self.category = responden_data[-1]
@@ -200,7 +200,16 @@ class FormPenilaian(ImagePanel):
         response = (time.time() - self.startTime) * 1000
         print 'RESPON AKHIR:', response
         date = time.strftime(" %d/%m/%Y %H:%M:%S", time.localtime())
-        score_set = [date, race, gender, expr, color, self.firstResponse, response, 'SALAH' if self.isWrong else '']
+        not_valid = self.firstResponse < 100 or self.firstResponse > 2000
+        if self.isWrong and not_valid:
+            keterangan = 'TIDAK VALID DAN SALAH'
+        elif self.isWrong:
+            keterangan = 'SALAH'
+        elif not_valid:
+            keterangan = 'TIDAK VALID'
+        else:
+            keterangan = ''
+        score_set = [date, race, gender, expr, color, self.firstResponse, response, keterangan]
         self.score.append(score_set)
         self.DONE = True
 
@@ -498,6 +507,7 @@ class ViewerFrame(wx.Frame):
         self.Bind(wx.EVT_JOY_MOVE, self.onMove)
         self.JOY_DO_SOMETHING = True
         self.NEUTRAL = True
+        self.hasil = []
 
     def onMove(self, event):
         # Rules:
@@ -617,29 +627,20 @@ class ViewerFrame(wx.Frame):
                         self.sesiPenilaian.startTime = time.time()
                     elif self.sesiPenilaian.shouldStop():
                         self.sesiPenilaian.resetFirstResponse()
-                        jumlah_salah = len(self.sesiPenilaian.wrongImages)
-                        if jumlah_salah > 10:
-                            print '===============REMEDIAL==============='
-                            print 'Jumlah Salah:', jumlah_salah
-                            self.sesiPenilaian.images.extend(self.sesiPenilaian.wrongImages)
-                            self.sesiPenilaian.wrongImages = []
-                            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
-                            self.sesiPenilaian.loadImage(None, 0)
-                            self.sesiPenilaian.startTime = time.time()
+                        self.writeScore(self.sesiPenilaian.getScore())
+                        self.sesiPenilaian.clearScore()
+                        self.sesiPenilaian.wrongImages = []
+                        print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
+                        if self.wait:
+                            self.jenisJeda = 'REST'
+                            self.sesiJeda.WritePesan(self.txtREST)
+                            self.onSwitchPanels('jeda')
+                            self.wait = False
                         else:
-                            self.writeScore(self.sesiPenilaian.getScore())
-                            self.sesiPenilaian.clearScore()
-                            self.sesiPenilaian.wrongImages = []
-                            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                            if self.wait:
-                                self.jenisJeda = 'REST'
-                                self.sesiJeda.WritePesan(self.txtREST)
-                                self.onSwitchPanels('jeda')
-                                self.wait = False
-                            else:
-                                self.sesiJeda.WritePesan(self.txtEND)
-                                self.onSwitchPanels('jeda')
-                                self.jenisJeda = 'END'
+                            self.hasil = []
+                            self.sesiJeda.WritePesan(self.txtEND)
+                            self.onSwitchPanels('jeda')
+                            self.jenisJeda = 'END'
                 else:
                     pass
         elif self.sesiJeda.IsShown():
@@ -702,6 +703,65 @@ class ViewerFrame(wx.Frame):
                 self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
                 self.sesiLatihan.loadImage(None,0)
 
+    def hitung_rerata(self, valid_data):
+        data = []
+        total_response_akhir = sum([x[6] for x in valid_data])
+        avg_akhir = float(total_response_akhir) / float(len(valid_data))
+        total_response_awal = sum([x[5] for x in valid_data])
+        avg_awal = float(total_response_awal) / float(len(valid_data))
+        # Generate category and calculate average response time for each of them
+        # ekspresi dan warna
+        categ_list = [x[3:5] for x in valid_data]
+        categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
+        for c in categ:
+            categ_data = [i for i in valid_data if i[3:5] == c]
+            categ_data_len = len(categ_data)
+            categ_tot_resp_awal = sum([i[5] for i in categ_data])
+            categ_tot_resp_akhir = sum([i[6] for i in categ_data])
+            categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
+            categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
+            data.append(['RERATA', 'UNTUK', 'KATEGORI', c[0], c[1], categ_avg_resp_awal, categ_avg_resp_akhir])
+        # ras
+        categ_ras_i = [c for c in valid_data if c[1] == 'I']
+        categ_ras_c = [c for c in valid_data if c[1] == 'C']
+        len_i = len(categ_ras_i)
+        len_c = len(categ_ras_c)
+        ras_i_tot_resp_awal = sum([i[5] for i in categ_ras_i])
+        ras_c_tot_resp_awal = sum([i[5] for i in categ_ras_c])
+        ras_i_tot_resp_akhir = sum([i[6] for i in categ_ras_i])
+        ras_c_tot_resp_akhir = sum([i[6] for i in categ_ras_c])
+        ras_i_avg_resp_awal = float(ras_i_tot_resp_awal) / float(len_i)
+        ras_c_avg_resp_awal = float(ras_c_tot_resp_awal) / float(len_c)
+        ras_i_avg_resp_akhir = float(ras_i_tot_resp_akhir) / float(len_i)
+        ras_c_avg_resp_akhir = float(ras_c_tot_resp_akhir) / float(len_c)
+        data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'I', ras_i_avg_resp_awal, ras_i_avg_resp_akhir])
+        data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'C', ras_c_avg_resp_awal, ras_c_avg_resp_akhir])
+        # ras ekspresi gender
+        categ_list = [[x[1], x[3], x[2][0]] for x in valid_data]
+        categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
+        for c in categ:
+            categ_data = [i for i in valid_data if i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1]]
+            categ_data_len = len(categ_data)
+            categ_tot_resp_awal = sum([i[5] for i in categ_data])
+            categ_tot_resp_akhir = sum([i[6] for i in categ_data])
+            categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
+            categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
+            data.append(['RERATA', 'UNTUK', c[0], c[1], c[2], categ_avg_resp_awal, categ_avg_resp_akhir])
+        # ras ekspresi gender warna
+        categ_list = [[x[1], x[3], x[2][0], x[4]] for x in valid_data]
+        categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
+        for c in categ:
+            categ_data = [i for i in valid_data if
+                          i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1] and i[4] == c[3]]
+            categ_data_len = len(categ_data)
+            categ_tot_resp_awal = sum([i[5] for i in categ_data])
+            categ_tot_resp_akhir = sum([i[6] for i in categ_data])
+            categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
+            categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
+            data.append(['RERATA UNTUK', c[0], c[1], c[2], c[3], categ_avg_resp_awal, categ_avg_resp_akhir])
+        data.append(['RERATA', 'KESELURUHAN:', '','','', avg_awal, avg_akhir])
+        return data
+
     def writeScore(self, data):
         '''
         :param data:
@@ -722,66 +782,19 @@ class ViewerFrame(wx.Frame):
         if len(data):
             file_name = 'hasil/' + '_'.join(data[0][1:]) + '.csv'  #nama_id.csv
             print 'file name: ', file_name, data
-            valid_data = [x for x in data[2:] if x[7] == '' or x[6] > 200]
-            total_response = sum([x[6] for x in valid_data])
-            # Generate category and calculate average response time for each of them
-            # ekspresi dan warna
-            categ_list = [x[3:5] for x in valid_data]
-            categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
-            for c in categ:
-                categ_data = [i for i in valid_data if i[3:5] == c]
-                categ_data_len = len(categ_data)
-                categ_tot_resp_awal = sum([i[5] for i in categ_data])
-                categ_tot_resp_akhir = sum([i[6] for i in categ_data])
-                categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
-                categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
-                data.append(['RERATA', 'UNTUK', 'KATEGORI', c[0], c[1], categ_avg_resp_awal, categ_avg_resp_akhir])
-            # ras
-            categ_ras_i = [c for c in valid_data if c[1] == 'I']
-            categ_ras_c = [c for c in valid_data if c[1] == 'C']
-            len_i = len(categ_ras_i)
-            len_c = len(categ_ras_c)
-            ras_i_tot_resp_awal = sum([i[5] for i in categ_ras_i])
-            ras_c_tot_resp_awal = sum([i[5] for i in categ_ras_c])
-            ras_i_tot_resp_akhir = sum([i[6] for i in categ_ras_i])
-            ras_c_tot_resp_akhir = sum([i[6] for i in categ_ras_c])
-            ras_i_avg_resp_awal = float(ras_i_tot_resp_awal) / float(len_i)
-            ras_c_avg_resp_awal = float(ras_c_tot_resp_awal) / float(len_c)
-            ras_i_avg_resp_akhir = float(ras_i_tot_resp_akhir) / float(len_i)
-            ras_c_avg_resp_akhir = float(ras_c_tot_resp_akhir) / float(len_c)
-            data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'I', ras_i_avg_resp_awal, ras_i_avg_resp_akhir])
-            data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'C', ras_c_avg_resp_awal, ras_c_avg_resp_akhir])
-            # ras ekspresi gender
-            categ_list = [[x[1], x[3], x[2][0]] for x in valid_data]
-            categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
-            for c in categ:
-                categ_data = [i for i in valid_data if i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1]]
-                categ_data_len = len(categ_data)
-                categ_tot_resp_awal = sum([i[5] for i in categ_data])
-                categ_tot_resp_akhir = sum([i[6] for i in categ_data])
-                categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
-                categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
-                data.append(['RERATA', 'UNTUK', c[0], c[1], c[2], categ_avg_resp_awal, categ_avg_resp_akhir])
-            # ras ekspresi gender warna
-            categ_list = [[x[1], x[3], x[2][0], x[4]] for x in valid_data]
-            categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
-            for c in categ:
-                categ_data = [i for i in valid_data if i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1] and i[4] == c[3]]
-                categ_data_len = len(categ_data)
-                categ_tot_resp_awal = sum([i[5] for i in categ_data])
-                categ_tot_resp_akhir = sum([i[6] for i in categ_data])
-                categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
-                categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
-                data.append(['RERATA UNTUK', c[0], c[1], c[2], c[3], categ_avg_resp_awal, categ_avg_resp_akhir])
+            valid_data = [x for x in data[2:] if not x[7].count('TIDAK VALID')]
             if len(valid_data):
-                avg = float(total_response) / float(len(valid_data))
-            else:
-                avg = 0.0
-            data.append(['RERATA KESELURUHAN:', avg])
+                self.hasil.extend(valid_data)
+                print "Jummlah data valid", len(valid_data)
+                rerata = self.hitung_rerata(valid_data)
+                data.extend(rerata)
             if self.wait:
                 data[0].append('SESI 1')
             else:
                 data[0].append('SESI 2')
+                data.append(['RERATA', 'SEMUA', 'SESI'])
+                rerata = self.hitung_rerata(self.hasil)
+                data.extend(rerata)
             print data
             with open(file_name, 'ab') as csvfile:
                 scorewriter = csv.writer(csvfile)
