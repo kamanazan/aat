@@ -126,63 +126,63 @@ class FormPenilaian(ImagePanel):
             self.isWrong = False
 
     def prepareImages(self):
-        image_list = [img for img in self.picPaths if (img.count('Happy') or img.count('Neutral'))]
+        image_list = [img for img in self.picPaths if (img.count('Angry') or img.count('Neutral'))]
         print "total image: ", len(image_list)
         if self.category == 'B':
-            image_list_happy = [img for img in image_list if img.count('Happy')] * 6
+            image_list_angry = [img for img in image_list if img.count('Angry')] * 6
             image_list_neutral = [img for img in image_list if img.count('Neutral')] * 6
 
-            img_g_happy = [face for face in image_list_happy if face.count('_G')]
-            img_s_happy = [face for face in image_list_happy if face.count('_S')]
+            img_g_angry = [face for face in image_list_angry if face.count('_G')]
+            img_s_angry = [face for face in image_list_angry if face.count('_S')]
 
             img_g_neutral = [face for face in image_list_neutral if face.count('_G')]
             img_s_neutral = [face for face in image_list_neutral if face.count('_S')]
-            print "Happy : ", len(image_list_happy)
+            print "Angry : ", len(image_list_angry)
             print "detail "
-            print "grey: ", len(img_g_happy)  # 96 image
-            print "sephia: ", len(img_s_happy)  # 96 image
+            print "grey: ", len(img_g_angry)  # 96 image
+            print "sephia: ", len(img_s_angry)  # 96 image
             print "==========================="
             print "neutral : ", len(image_list_neutral)
             print "detail "
             print "grey: ", len(img_g_neutral)  # 96 image
             print "sephia: ", len(img_s_neutral)  # 96 image
-            population_g_happy = len(img_g_happy)
-            population_s_happy = len(img_s_happy)
+            population_g_angry = len(img_g_angry)
+            population_s_angry = len(img_s_angry)
             population_g_neutral = len(img_g_neutral)
             population_s_neutral = len(img_s_neutral)
         elif self.category == 'A':
 
-            image_list_happy = [img for img in image_list if img.count('Happy')]
+            image_list_angry = [img for img in image_list if img.count('Angry')]
             image_list_neutral = [img for img in image_list if img.count('Neutral')]
 
-            img_g_happy = [face for face in image_list_happy if face.count('_G')] * 11
-            img_s_happy = [face for face in image_list_happy if face.count('_S')] * 1
+            img_g_angry = [face for face in image_list_angry if face.count('_G')] * 11
+            img_s_angry = [face for face in image_list_angry if face.count('_S')] * 1
 
             img_g_neutral = [face for face in image_list_neutral if face.count('_G')] * 1
             img_s_neutral = [face for face in image_list_neutral if face.count('_S')] * 11
 
-            print "Happy : ", len(image_list_happy)
+            print "Angry : ", len(image_list_angry)
             print "detail "
-            print "     grey: ", len(img_g_happy)
-            print "     sephia: ", len(img_s_happy)
+            print "     grey: ", len(img_g_angry)
+            print "     sephia: ", len(img_s_angry)
             print "==========================="
             print "neutral : ", len(image_list_neutral)
             print "detail "
             print "     grey: ", len(img_g_neutral)  # 96 image
             print "     sephia: ", len(img_s_neutral)  # 96 image
-            population_g_happy = len(img_g_happy)
-            population_s_happy = len(img_s_happy)
+            population_g_angry = len(img_g_angry)
+            population_s_angry = len(img_s_angry)
             population_g_neutral = len(img_g_neutral)
             population_s_neutral = len(img_s_neutral)
 
         # -----------------------------------------------------------------------------------------------
 
-        image_g_happy_list = random.sample(img_g_happy, population_g_happy)
-        image_s_happy_list = random.sample(img_s_happy, population_s_happy)
+        image_g_angry_list = random.sample(img_g_angry, population_g_angry)
+        image_s_angry_list = random.sample(img_s_angry, population_s_angry)
         image_g_neutral_list = random.sample(img_g_neutral, population_g_neutral)
         image_s_neutral_list = random.sample(img_s_neutral, population_s_neutral)
 
-        image_used = list(image_g_happy_list + image_s_happy_list + image_g_neutral_list + image_s_neutral_list)
+        image_used = list(image_g_angry_list + image_s_angry_list + image_g_neutral_list + image_s_neutral_list)
         # image_bw_list.extend(image_sp_list)
         random.shuffle(image_used)
         # image_used = image_bw_list
@@ -192,7 +192,7 @@ class FormPenilaian(ImagePanel):
     def setResponden(self, responden_data):
         self.category = responden_data[-1]
         self.score.append(responden_data)
-        self.score.append(['TGL', 'RAS', 'GENDER', 'EKSPRESI', 'WARNA', 'RESPON AWAL(REACTION TIME)(ms)',
+        self.score.append(['TGL', 'RAS', 'SEX', 'EKSPRESI', 'WARNA', 'RESPON AWAL(REACTION TIME)(ms)',
                            'RESPON AKHIR(RESPONSE TIME)(ms)', 'KET'])
 
     def calculateResponse(self):
@@ -434,10 +434,11 @@ class FormContohSalah(wx.Panel):
 artinya, Anda keliru dalam MENARIK / MENDORONG.
 Ingat, TARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH
 dan
-DORONG joystick mendekati tubuh jika yang tersaji adalah foto berwarna SEPHIA."""
+DORONG joystick mendekati tubuh jika yang tersaji adalah foto berwarna SEPHIA.
+Jika keliru, teruskan saja untuk mengerjakan"""
         self.pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
         font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        font_big = wx.Font(256, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        font_big = wx.Font(246, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.title1 = wx.StaticText(self, wx.ID_ANY, label=self.pesan1, style=wx.ALIGN_CENTER)
         self.title2 = wx.StaticText(self, wx.ID_ANY, label=self.pesan2, style=wx.ALIGN_CENTER)
         self.title3 = wx.StaticText(self, wx.ID_ANY, label='X', style=wx.ALIGN_CENTER)
@@ -485,7 +486,7 @@ class ViewerFrame(wx.Frame):
         self.jumlahLatihan = 1
         self.LOCK_PANEL = False
         self.txtINS1 = "Kepada anda akan disajikan\nFoto-foto berwarna HITAM PUTIH dan SEPHIA\n\n\n\nTugas Anda adalah\nMENARIK joystick untuk foto HITAM PUTIH\nMENDORONG Joystick untuk foto SEPHIA\n\n\nPada saat MENARIK, foto akan membesar\nPada saat MENDORONG, foto akan mengecil dan menghilang\nAnda diminta untuk MENARIK/MENDORONG joystick hingga maksimal\n(Tidak dapat bergerak lagi)\n\n\nSetelah itu Anda diminta untuk mengembalikan joystick ke posisi tengah kembali dan\nfoto baru akan ditampilkan\n\n\n\nGeser joystick ke kanan untuk memulai"
-        self.txtINS2 = 'Berikut ini adalah sesi latihan\n\n\n\nKepada Anda akan disajikan foto pemandangan berwarna HITAM PUTIH dan SEPHIA\n\n\nTARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH\nDORONG joystick menjauhi tubuh jika yang tersaji adalah foto berwarna SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan \nMENGEMBALIKAN joystick ke posisi tengah dan akan ditampilkan foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
+        self.txtINS2 = 'Berikut ini adalah sesi latihan\n\n\n\nKepada Anda akan disajikan foto pemandangan berwarna HITAM PUTIH dan SEPHIA\n\n\nTARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH\nDORONG joystick menjauhi tubuh jika yang tersaji adalah foto berwarna SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan \nMENGEMBALIKAN joystick ke posisi tengah, setelah itu akan ditampilkan foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
         self.txtOPN = 'Berikut ini adalah sesi program\n\n\n\nTARIK joystick untuk foto HITAM PUTIH\nDORONG joystick untuk foto SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan\nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
         self.txtREST = 'SESI 1 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya'
         self.txtEND = 'Sesi program telah selesai\n\n\nTerima kasih atas partisipasi anda'
@@ -793,9 +794,10 @@ class ViewerFrame(wx.Frame):
                 data[0].append('SESI 1')
             else:
                 data[0].append('SESI 2')
-                data.append(['RERATA', 'SEMUA', 'SESI'])
-                rerata = self.hitung_rerata(self.hasil)
-                data.extend(rerata)
+                if self.hasil:
+                    data.append(['RERATA', 'SEMUA', 'SESI'])
+                    rerata = self.hitung_rerata(self.hasil)
+                    data.extend(rerata)
             print data
             with open(file_name, 'ab') as csvfile:
                 scorewriter = csv.writer(csvfile)

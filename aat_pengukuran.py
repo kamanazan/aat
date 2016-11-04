@@ -166,7 +166,7 @@ class FormPenilaian(ImagePanel):
     def setResponden(self, responden_data):
         self.category = 'NO'
         self.score.append(responden_data)
-        self.score.append(['TGL', 'RAS', 'GENDER', 'EKSPRESI', 'WARNA', 'RESPON AWAL(REACTION TIME)(ms)',
+        self.score.append(['TGL', 'RAS', 'SEX', 'EKSPRESI', 'WARNA', 'RESPON AWAL(REACTION TIME)(ms)',
                            'RESPON AKHIR(RESPONSE TIME)(ms)', 'KET'])
 
     def calculateResponse(self):
@@ -396,7 +396,8 @@ class FormContohSalah(wx.Panel):
 artinya, Anda keliru dalam MENARIK / MENDORONG.
 Ingat, TARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH
 dan
-DORONG joystick mendekati tubuh jika yang tersaji adalah foto berwarna SEPHIA."""
+DORONG joystick mendekati tubuh jika yang tersaji adalah foto berwarna SEPHIA.
+Jika keliru, teruskan saja untuk mengerjakan"""
         self.pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
         font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         font_big = wx.Font(256, wx.DEFAULT, wx.NORMAL, wx.BOLD)
@@ -449,7 +450,7 @@ class ViewerFrame(wx.Frame):
         self.jumlahLatihan = 1
         self.LOCK_PANEL = False
         self.txtINS1 = "Kepada anda akan disajikan\nFoto-foto berwarna HITAM PUTIH dan SEPHIA\n\n\n\nTugas Anda adalah\nMENARIK joystick untuk foto HITAM PUTIH\nMENDORONG Joystick untuk foto SEPHIA\n\n\nPada saat MENARIK, foto akan membesar\nPada saat MENDORONG, foto akan mengecil dan menghilang\nAnda diminta untuk MENARIK/MENDORONG joystick hingga maksimal\n(Tidak dapat bergerak lagi)\n\n\nSetelah itu Anda diminta untuk mengembalikan joystick ke posisi tengah kembali dan\nfoto baru akan ditampilkan\n\n\n\nGeser joystick ke kanan untuk memulai"
-        self.txtINS2 = 'Berikut ini adalah sesi latihan\n\n\n\nKepada Anda akan disajikan foto pemandangan berwarna HITAM PUTIH dan SEPHIA\n\n\nTARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH\nDORONG joystick menjauhi tubuh jika yang tersaji adalah foto berwarna SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan \nMENGEMBALIKAN joystick ke posisi tengah dan akan ditampilkan foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
+        self.txtINS2 = 'Berikut ini adalah sesi latihan\n\n\n\nKepada Anda akan disajikan foto pemandangan berwarna HITAM PUTIH dan SEPHIA\n\n\nTARIK joystick mendekati tubuh jika yang tersaji adalah foto berwarna HITAM PUTIH\nDORONG joystick menjauhi tubuh jika yang tersaji adalah foto berwarna SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan \nMENGEMBALIKAN joystick ke posisi tengah, setelah itu akan ditampilkan foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
         self.txtOPN = 'Berikut ini adalah sesi program\n\n\n\nTARIK joystick untuk foto HITAM PUTIH\nDORONG joystick untuk foto SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan\nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
 
         self.txtREST = ['SESI 1 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya',
@@ -608,17 +609,11 @@ class ViewerFrame(wx.Frame):
                         self.sesiPenilaian.clearScore()
                         self.sesiPenilaian.wrongImages = []
                         print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                        if self.sesi == 3:
-                            self.hasil = []
-                            self.sesi = 1
-                            self.sesiJeda.WritePesan(self.txtEND)
-                            self.onSwitchPanels('jeda')
-                            self.jenisJeda = 'END'
-                        else:
-                            self.jenisJeda = 'REST'
-                            self.sesiJeda.WritePesan(self.txtREST[self.sesi-1])
-                            self.sesi += 1
-                            self.onSwitchPanels('jeda')
+                        self.hasil = []
+                        self.sesi = 1
+                        self.sesiJeda.WritePesan(self.txtEND)
+                        self.onSwitchPanels('jeda')
+                        self.jenisJeda = 'END'
                 else:
                     pass
         elif self.sesiJeda.IsShown():
@@ -768,10 +763,6 @@ class ViewerFrame(wx.Frame):
                 rerata = self.hitung_rerata(valid_data)
                 data.extend(rerata)
             data[0].append('SESI %d' % self.sesi)
-            if self.sesi == 3:
-                data.append(['RERATA', 'SEMUA', 'SESI'])
-                rerata = self.hitung_rerata(self.hasil)
-                data.extend(rerata)
             print data
             with open(file_name, 'ab') as csvfile:
                 scorewriter = csv.writer(csvfile)
