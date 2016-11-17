@@ -466,7 +466,7 @@ class ViewerFrame(wx.Frame):
     """"""
     def __init__(self):
         """Constructor"""
-        wx.Frame.__init__(self, None, wx.ID_ANY, title="Image Viewer")
+        wx.Frame.__init__(self, None, wx.ID_ANY, title="AAT Retraining")
         self.formIdentitas = FormIdentitas(self)
         self.sesiPenilaian = FormPenilaian(self)
         self.sesiJeda = FormJeda(self)
@@ -779,31 +779,45 @@ class ViewerFrame(wx.Frame):
                     6: respon akhir
                     7: keterangan('SALAH' kalo aksi tidak sesuai warna gambar, '' kalo benar)
         '''
+        if not len(data):
+            return False
+        # pastikan data hasil pengujian tidak tercemar
+        if any(len(x) != 8 for x in data[2:]):
+            return False
         if not os.path.exists('hasil'):
             os.makedirs('hasil')
-        if len(data):
-            file_name = 'hasil/' + '_'.join(data[0][1:]) + '.csv'  #nama_id.csv
-            print 'file name: ', file_name, data
-            valid_data = [x for x in data[2:] if not x[7].count('TIDAK VALID')]
-            if len(valid_data):
-                self.hasil.extend(valid_data)
-                print "Jummlah data valid", len(valid_data)
-                rerata = self.hitung_rerata(valid_data)
-                data.extend(rerata)
-            if self.wait:
-                data[0].append('SESI 1')
-            else:
-                data[0].append('SESI 2')
-                if self.hasil:
-                    data.append(['RERATA', 'SEMUA', 'SESI'])
-                    rerata = self.hitung_rerata(self.hasil)
-                    data.extend(rerata)
-            print data
-            with open(file_name, 'ab') as csvfile:
-                scorewriter = csv.writer(csvfile)
-                scorewriter.writerows(data[0:])
+        file_name = 'hasil/' + '_'.join(data[0][1:]) + '.csv'  #nama_id.csv
+        # cek keadaan file, kalo tidak bisa diakses ganti nama file
+        try:
+            f = open(file_name, 'ab')
+        except IOError:
+            ts = int(time.time())
+            file_name = 'hasil/' + 'DARURAT_' + '_'.join(data[0][1:]) + '_' + str(ts) + '.csv'
         else:
-            pass
+            f.close()
+        print 'file name: ', file_name, data
+        if self.wait:
+            data[0].append('SESI 1')
+        else:
+            data[0].append('SESI 2')
+        # amankan hasil pengujian
+        with open(file_name, 'ab') as csvfile:
+            scorewriter = csv.writer(csvfile)
+            scorewriter.writerows(data[0:])
+        # Mulai menghitung rerata
+        valid_data = [x for x in data[2:] if not x[7].count('TIDAK VALID')]
+        if not len(valid_data):
+            return False
+        rerata = []
+        self.hasil.extend(valid_data)
+        rerata.extend(self.hitung_rerata(valid_data))
+        if not self.wait and self.hasil:
+            rerata.append(['RERATA', 'SEMUA', 'SESI'])
+            rerata.extend(self.hitung_rerata(self.hasil))
+        with open(file_name, 'ab') as csvfile:
+            scorewriter = csv.writer(csvfile)
+            scorewriter.writerows(rerata[0:])
+        return True
 
     def onSwitchPanels(self, window):
         """"""
