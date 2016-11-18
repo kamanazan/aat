@@ -777,7 +777,7 @@ class ViewerFrame(wx.Frame):
             scorewriter = csv.writer(csvfile)
             scorewriter.writerows(data[0:])
         # Mulai menghitung rerata
-        valid_data = [x for x in data[2:] if not x[7].count('TIDAK VALID')]
+        valid_data = [x for x in data[2:] if not x[7]]
         if not len(valid_data):
             return False
         rerata = []
