@@ -1,32 +1,102 @@
-import glob
 import os
+from pathlib2 import Path
 import wx
+import wx.adv
 
 import random
 import time
 import csv
 import decimal
 
+from collections import defaultdict
+
+JENIS_BLOK = ['Latihan', 'BLOK A', 'BLOK B', 'BLOK C']
+
+
+class AatImage:
+    def __init__(self, curr_path):
+        """
+        get list of image in current directory
+        curr_path: PosixPAth object parent dir of the images, starts with push* / pull*
+        """
+
+        self.action = 'PUSH' if curr_path.name.count('Push') else 'PULL'
+        self.category = curr_path.parents[0].name
+        # since glob is generator we use next() to get the first item and resolve() to get the full path
+        self.phases = {
+            0: str(curr_path.glob('*medium.jpg').next().resolve()),
+            1: str(curr_path.glob('*1.jpg').next().resolve()),
+            2: str(curr_path.glob('*2.jpg').next().resolve()),
+            3: str(curr_path.glob('*3.jpg').next().resolve()),
+        }
+        self.wrong_image = str(curr_path.glob('*SALAH.jpg').next().resolve())
+
+    def image_on_phase(self, scale):
+        if scale <= 0.2:
+            phase = 0
+        elif (scale > 0.2) and (scale <=0.5):
+            phase = 1
+        elif (scale > 0.5) and (scale <= 0.9):
+            phase = 2
+        else:
+            phase = 3
+        return self.phases[phase]
+
+    def wrong_image(self):
+        return self.wrong_image
+
+    def __str__(self):
+        return '%s - %s' % (self.action, self.category)
+
+    def __repr__(self):
+        return self.__str__()
+
+
 class ImagePanel(wx.Panel):
-    def __init__(self, parent):
+
+    def __init__(self, parent, rep=1):
+        """
+
+        :param parent: default param for wx.Panel instance
+        :param rep: extra param that set the number of repetition for the image set
+        """
         wx.Panel.__init__(self, parent)
+        self.SetBackgroundColour('BLACK')
+        self.__img_repetition__ = rep
         self.widthDisp, self.heightDisp = wx.DisplaySize()
+        self.displayed_image = wx.Image(1, 1)
         self.image_name = ''
-        self.currentImage = ''
+        self.current_image = None
         self.images = []
         self.totalPictures = 0
         self.isWrong = False
-        self.picPaths = glob.glob('images\*.jpg')
-        self.layout()
+        self.picPaths = Path('images')
+        # Preparing the layout
+        self.imgSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
+        self.imageCtrl = wx.StaticBitmap(self, id=wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.displayed_image)))
+        self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
+        self.imgSizer.Fit(self)
+        self.SetSizer(self.imgSizer)
 
     def wrong_action(self, warna=None):
         pass
 
-    def prepareImages(self):
-        pass
+    def prepare_images(self, blok):
+        img_path = '*%s*/*/*' % JENIS_BLOK[blok]
+        path_to_image = list(self.picPaths.glob(img_path))
+        image_used = []
+        for x in xrange(self.__img_repetition__):
+            # image must be repeated 12 times
+            image_used.extend([AatImage(folder) for folder in path_to_image])  # something like that
+        # image_bw_list.extend(image_sp_list)
+        random.shuffle(image_used)
+        # image_used = image_bw_list
+        print "jumlah foto: ", len(image_used)
+        self.images = image_used
 
     def setCurrentImage(self, image):
-        self.currentImage = image
+        self.current_image = image
+        self.isWrong = False
         print "img left:", len(self.images)
 
     def getRandomImage(self):
@@ -35,71 +105,17 @@ class ImagePanel(wx.Panel):
     def shouldStop(self):
         return len(self.images) == 0
 
-    def layout(self):
-        """
-        Layout the widgets on the panel
-        """
-        self.img = wx.EmptyImage(1,1)
-        self.imgSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
-        self.imageCtrl = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.img))
-        self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
-        self.imgSizer.Fit(self)
-        self.SetSizer(self.imgSizer)
 
     def loadImage(self, action, scale):
         """
         action: 'PUSH' or 'PULL', determine whether the image should be zoomed out/zoomed in
         scale: current y-axis of the joystick, this is used for smoother scaling
         """
-        image = self.currentImage
-        self.image_name = os.path.basename(image)
-        self.img = wx.Image(image, wx.BITMAP_TYPE_ANY)
-        width = 400
-        height = 400
-
-        if action is not None:
-            if action == 'PUSH':
-                # the final size is 1x1 pixels to make the image "disappear"
-                target_size = 399
-                print 'PUSH!'
-                if self.image_name.count('_G'):
-                    self.wrong_action(warna='G')
-                else:
-                    self.wrong_action()
-                width = 400 - (target_size * scale)
-                height = 400 - (target_size * scale)
-            elif action == 'PULL':
-                target_size = self.heightDisp - 400
-                print 'PULL!'
-                if self.image_name.count('_S'):
-                    self.wrong_action(warna='S')
-                else:
-                    self.wrong_action()
-                width = 400 + (target_size * scale)
-                height = 400 + (target_size * scale)
-            elif action == 'TESTPUSH':
-                # the final size is 1x1 pixels to make the image "disappear"
-                target_size = 399
-                print 'TESTPUSH!'
-                if self.image_name.count('_G'):
-                    self.wrong_action(warna='G')
-                else:
-                    self.wrong_action()
-                    width = 400 - (target_size * scale)
-                    height = 400 - (target_size * scale)
-            elif action == 'TESTPULL':
-                target_size = self.heightDisp - 400
-                print 'TESTPULL!'
-                if self.image_name.count('_S'):
-                    self.wrong_action(warna='S')
-                else:
-                    self.wrong_action()
-                    width = 400 + (target_size * scale)
-                    height = 400 + (target_size * scale)
-
-        print 'new size: ', int(width), int(height)
-        self.img = self.img.Scale(int(width), int(height))
-        self.imageCtrl.SetBitmap(wx.BitmapFromImage(self.img))
+        self.image_name = self.current_image
+        self.isWrong = self.current_image.action != action if action and not self.isWrong else self.isWrong
+        self.displayed_image = self.current_image.wrong_image if self.isWrong else self.current_image.image_on_phase(scale)
+        print 'Displayed Image:', self.displayed_image
+        self.imageCtrl.SetBitmap(wx.Bitmap(self.displayed_image))
         self.imgSizer.Remove(0)
         self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
         self.Update()
@@ -109,9 +125,9 @@ class ImagePanel(wx.Panel):
 
 class FormPenilaian(ImagePanel):
     """"""
-    def __init__(self, parent):
+    def __init__(self, parent, rep):
         """Constructor"""
-        super(FormPenilaian, self).__init__(parent)
+        super(FormPenilaian, self).__init__(parent, rep)
         self.category = ''
         self.firstResponse = 0.0
         self.startTime = 0
@@ -125,95 +141,32 @@ class FormPenilaian(ImagePanel):
         else:
             self.isWrong = False
 
-    def prepareImages(self):
-        image_list = [img for img in self.picPaths if (img.count('Happy') or img.count('Neutral'))]
-        print "total image: ", len(image_list)
-        if self.category == 'B':
-            image_list_happy = [img for img in image_list if img.count('Happy')] * 6
-            image_list_neutral = [img for img in image_list if img.count('Neutral')] * 6
-
-            img_g_happy = [face for face in image_list_happy if face.count('_G')]
-            img_s_happy = [face for face in image_list_happy if face.count('_S')]
-
-            img_g_neutral = [face for face in image_list_neutral if face.count('_G')]
-            img_s_neutral = [face for face in image_list_neutral if face.count('_S')]
-            print "Happy : ", len(image_list_happy)
-            print "detail "
-            print "grey: ", len(img_g_happy)  # 96 image
-            print "sephia: ", len(img_s_happy)  # 96 image
-            print "==========================="
-            print "neutral : ", len(image_list_neutral)
-            print "detail "
-            print "grey: ", len(img_g_neutral)  # 96 image
-            print "sephia: ", len(img_s_neutral)  # 96 image
-            population_g_happy = len(img_g_happy)
-            population_s_happy = len(img_s_happy)
-            population_g_neutral = len(img_g_neutral)
-            population_s_neutral = len(img_s_neutral)
-        elif self.category == 'A':
-
-            image_list_happy = [img for img in image_list if img.count('Happy')]
-            image_list_neutral = [img for img in image_list if img.count('Neutral')]
-
-            img_g_happy = [face for face in image_list_happy if face.count('_G')] * 2
-            img_s_happy = [face for face in image_list_happy if face.count('_S')] * 2
-
-            img_g_neutral = [face for face in image_list_neutral if face.count('_G')] * 2
-            img_s_neutral = [face for face in image_list_neutral if face.count('_S')] * 2
-
-            print "Happy : ", len(image_list_happy)
-            print "detail "
-            print "     grey: ", len(img_g_happy)
-            print "     sephia: ", len(img_s_happy)
-            print "==========================="
-            print "neutral : ", len(image_list_neutral)
-            print "detail "
-            print "     grey: ", len(img_g_neutral)  # 96 image
-            print "     sephia: ", len(img_s_neutral)  # 96 image
-            population_g_happy = len(img_g_happy)
-            population_s_happy = len(img_s_happy)
-            population_g_neutral = len(img_g_neutral)
-            population_s_neutral = len(img_s_neutral)
-
-        # -----------------------------------------------------------------------------------------------
-
-        image_g_happy_list = random.sample(img_g_happy, population_g_happy)
-        image_s_happy_list = random.sample(img_s_happy, population_s_happy)
-        image_g_neutral_list = random.sample(img_g_neutral, population_g_neutral)
-        image_s_neutral_list = random.sample(img_s_neutral, population_s_neutral)
-
-        image_used = list(image_g_happy_list + image_s_happy_list + image_g_neutral_list + image_s_neutral_list)
-        # image_bw_list.extend(image_sp_list)
-        random.shuffle(image_used)
-        # image_used = image_bw_list
-        print "jumlah foto: ", len(image_used)
-        self.images = image_used
+    def prepare_images(self, blok):
+        super(FormPenilaian, self).prepare_images(blok)
+        assert len(self.images) == 168
 
     def setResponden(self, responden_data):
         self.category = responden_data[-1]
+        # JUDUL
+        self.score.append(
+            ['Identitas', '', '', '', '', '', 'Jenis Crowd', 'Waktu reaksi dalam miliseconds (pengulangan ke-)', '', '', '', '', '', '',
+             '', '', '', '', ''])
+        # SUB JUDUL
+        self.score.append(['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', 'KODE BLOK', '', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
         self.score.append(responden_data)
-        self.score.append(['TGL', 'RAS', 'SEX', 'EKSPRESI', 'WARNA', 'RESPON AWAL(REACTION TIME)(ms)', 'RESPON AKHIR(RESPONSE TIME)(ms)', 'KET'])
 
     def calculateResponse(self):
-        info = self.image_name.split('.')[0]
-        race, gender, expr, color = info.split('_')
+        info = self.image_name
         response = (time.time() - self.startTime) * 1000
+        if self.isWrong:
+            response *= -1.0
         print 'RESPON AKHIR:', response
-        date = time.strftime(" %d/%m/%Y %H:%M:%S", time.localtime())
-        not_valid = self.firstResponse < 100 or self.firstResponse > 2000
-        if self.isWrong and not_valid:
-            keterangan = 'TIDAK VALID DAN SALAH'
-        elif self.isWrong:
-            keterangan = 'SALAH'
-        elif not_valid:
-            keterangan = 'TIDAK VALID'
-        else:
-            keterangan = ''
-        score_set = [date, race, gender, expr, color, self.firstResponse, response, keterangan]
+        score_set = (str(info), response)
         self.score.append(score_set)
         self.DONE = True
 
     def calculateFirstResponse(self):
+        # TODO: mungkin ga dipake
         self.firstResponse = (time.time() - self.startTime) * 1000
         print 'RESPON AWAL: ', self.firstResponse
 
@@ -230,15 +183,15 @@ class FormPenilaian(ImagePanel):
 
 class FormLatihan(ImagePanel):
     """"""
-    def __init__(self, parent):
+    def __init__(self, parent, rep):
         """Constructor"""
-        super(FormLatihan, self).__init__(parent)
+        super(FormLatihan, self).__init__(parent, rep)
         self.img_latih_g_salah = 'images\Latihan_G_salah.jpeg'
         self.img_latih_s_salah = 'images\Latihan_S_salah.jpeg'
         self.img_latih_g = 'images\Latihan_G.jpeg'
         self.img_latih_s = 'images\Latihan_S.jpeg'
         self.currentImage = self.img_latih_g
-        self.layout()
+        # self.layout()
 
     def wrong_action(self, warna=None):
         if warna == 'G':
@@ -251,7 +204,7 @@ class FormLatihan(ImagePanel):
             self.img = wx.Image(image, wx.BITMAP_TYPE_ANY)
             self.isWrong = True
 
-    def prepareImages(self):
+    def prepare_images(self):
         self.images = [self.img_latih_g, self.img_latih_s] * 6
         self.images = random.sample(self.images,12)
         self.images.append(self.img_latih_g)
@@ -263,6 +216,7 @@ class FormIdentitas(wx.Panel):
     def __init__(self, parent):
         # Add a panel so it looks correct on all platforms
         wx.Panel.__init__(self, parent)
+        self.SetBackgroundColour('WHITE')
         title = wx.StaticText(self, wx.ID_ANY, 'Masukan identitas')
         lblSize = (50, -1)
 
@@ -361,7 +315,7 @@ class FormJeda(wx.Panel):
         font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.title.SetFont(font)
 
-        titleSizer = wx.GridSizer(rows=1, cols=1)
+        titleSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
 
         titleSizer.Add(self.title, 0, wx.ALIGN_CENTER, 0)
 
@@ -393,14 +347,14 @@ class FormContoh(wx.Panel):
 
         self.imgs = wx.Image('images/Latihan_S.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
         self.imgg = wx.Image('images/Latihan_G.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
-        self.imageCtrls = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.imgs), style=wx.ALIGN_BOTTOM)
-        self.imageCtrlg = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(self.imgg), style=wx.ALIGN_CENTER)
+        self.imageCtrls = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgs)), style=wx.ALIGN_BOTTOM)
+        self.imageCtrlg = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgg)), style=wx.ALIGN_CENTER)
 
         foto1 = wx.BoxSizer(wx.VERTICAL)
         foto2 = wx.BoxSizer(wx.VERTICAL)
         tmpsizer = wx.BoxSizer(wx.VERTICAL)
         fotoSizer = wx.BoxSizer()
-        sizer = wx.GridSizer(rows=1, cols=1)
+        sizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
 
         foto1.Add(self.title1, 0, wx.ALIGN_CENTER, 0)
         foto1.Add((10,10))
@@ -437,8 +391,8 @@ dan
 DORONG joystick mendekati tubuh jika yang tersaji adalah foto berwarna SEPHIA.
 Jika keliru, teruskan saja untuk mengerjakan"""
         self.pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
-        font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        font_big = wx.Font(256, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        font = wx.Font(22, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        font_big = wx.Font(256, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.title1 = wx.StaticText(self, wx.ID_ANY, label=self.pesan1, style=wx.ALIGN_CENTER)
         self.title2 = wx.StaticText(self, wx.ID_ANY, label=self.pesan2, style=wx.ALIGN_CENTER)
         self.title3 = wx.StaticText(self, wx.ID_ANY, label='X', style=wx.ALIGN_CENTER)
@@ -449,7 +403,7 @@ Jika keliru, teruskan saja untuk mengerjakan"""
         self.title3.SetFont(font_big)
         self.title3.SetForegroundColour((255,0,0))
 
-        titleSizer = wx.GridSizer(rows=4, cols=1, vgap=10)
+        titleSizer = wx.GridSizer(rows=4, cols=1, hgap=1, vgap=10)
 
         titleSizer.Add(self.title1, 0, wx.ALIGN_CENTER, 0)
         titleSizer.Add(self.title3, 0, wx.ALIGN_CENTER, 0)
@@ -466,11 +420,12 @@ class ViewerFrame(wx.Frame):
     """"""
     def __init__(self):
         """Constructor"""
-        wx.Frame.__init__(self, None, wx.ID_ANY, title="Image Viewer")
+        wx.Frame.__init__(self, None, wx.ID_ANY, title="Approach-Avoidance Task")
         self.formIdentitas = FormIdentitas(self)
-        self.sesiPenilaian = FormPenilaian(self)
+        self.sesiPenilaian = FormPenilaian(self, 12)
         self.sesiJeda = FormJeda(self)
-        self.sesiLatihan = FormLatihan(self)
+        # self.sesiLatihan = FormLatihan(self)
+        self.sesiLatihan = ImagePanel(self, 2)
         self.contohGambar = FormContoh(self)
         self.contohSalah = FormContohSalah(self)
         self.contohGambar.Hide()
@@ -480,7 +435,7 @@ class ViewerFrame(wx.Frame):
         self.sesiPenilaian.Hide()
         self.formIdentitas.Show()
         self.folderPath = ""
-        self.wait = True
+        self.sesi = 0 # dipakai untuk menentukan jenis block, 0=Latihan, 1..3=Blok A..C
         self.latihan = True
         self.jenisJeda = 'INS1'  #[INS1|INS2|OPN|REST|END]
         self.jumlahLatihan = 1
@@ -503,7 +458,7 @@ class ViewerFrame(wx.Frame):
         self.Show()
         self.sizer.Fit(self)
         self.ShowFullScreen(True)
-        self.joystick = wx.Joystick()
+        self.joystick = wx.adv.Joystick()
         self.joystick.SetCapture(self)
         self.Bind(wx.EVT_JOY_MOVE, self.onMove)
         self.JOY_DO_SOMETHING = True
@@ -527,7 +482,7 @@ class ViewerFrame(wx.Frame):
         # this cannot be exactly 0.0 as the x/y axis rarely have that value in neutral position
         neutral = 0.2
         full = 0.9
-        print "pos:",posx, posy, x, y
+        # print "pos:",posx, posy, x, y
 
         if self.formIdentitas.IsShown():
             if self.LOCK_PANEL:
@@ -549,6 +504,7 @@ class ViewerFrame(wx.Frame):
                 if abs(posx) <= neutral:
                     self.JOY_DO_SOMETHING = True
                     self.LOCK_PANEL = False
+                    print 'LOCK RELEASE!'
                 else:
                     pass
             else:
@@ -557,15 +513,15 @@ class ViewerFrame(wx.Frame):
                     scale = abs(posy)
                     if posy >= full:
                         scale = 1.0
-                    self.sesiLatihan.loadImage('TESTPUSH', scale)
-                    print "posx,posy: ", posx, posy
+                    print "PUSH - posx,posy: ", posx, posy, scale
+                    self.sesiLatihan.loadImage('PUSH', scale)
                 elif posy < -neutral and self.JOY_DO_SOMETHING:
                     self.JOY_DO_SOMETHING = False if posy <= -full else True
                     scale = abs(posy)
                     if posy <= -full:
                         scale = 1.0
-                    self.sesiLatihan.loadImage('TESTPULL', scale)
-                    print "posx,posy: ", posx, posy
+                    print "PULL - posx,posy: ", posx, posy, scale
+                    self.sesiLatihan.loadImage('PULL', scale)
                 elif (abs(posy) <= neutral ) and self.JOY_DO_SOMETHING:
                     # When joystick return to normal position before fully push/pull return image to original size
                     self.sesiLatihan.loadImage(None, 0)
@@ -578,8 +534,9 @@ class ViewerFrame(wx.Frame):
                         self.jenisJeda = 'OPN'
                         self.onSwitchPanels('jeda')
                     else:
-                        if not self.sesiLatihan.isWrong:
-                            self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
+                        # if not self.sesiLatihan.isWrong:
+                        #     self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
+                        self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
                         self.sesiLatihan.loadImage(None,0)
                 else:
                     pass
@@ -621,22 +578,21 @@ class ViewerFrame(wx.Frame):
                     if not self.sesiPenilaian.shouldStop():
                         print 'NEXT!', posx, posy, abs(posy)
                         if self.sesiPenilaian.isWrong:
-                            self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.currentImage)
+                            self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.current_image)
                         self.sesiPenilaian.resetFirstResponse()
                         self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
                         self.sesiPenilaian.loadImage(None, 0)
                         self.sesiPenilaian.startTime = time.time()
                     elif self.sesiPenilaian.shouldStop():
                         self.sesiPenilaian.resetFirstResponse()
-                        self.writeScore(self.sesiPenilaian.getScore())
+                        self.save(self.sesiPenilaian.getScore())
                         self.sesiPenilaian.clearScore()
                         self.sesiPenilaian.wrongImages = []
                         print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                        if self.wait:
+                        if self.sesi < 3:
                             self.jenisJeda = 'REST'
                             self.sesiJeda.WritePesan(self.txtREST)
                             self.onSwitchPanels('jeda')
-                            self.wait = False
                         else:
                             self.hasil = []
                             self.sesiJeda.WritePesan(self.txtEND)
@@ -653,16 +609,16 @@ class ViewerFrame(wx.Frame):
                 print "==========="
                 print "do something? ", self.JOY_DO_SOMETHING
                 print "panel locked? ", self.LOCK_PANEL
-                print "wait? ", self.wait
                 if self.jenisJeda == 'INS1':
                     self.onSwitchPanels('contoh')
                 elif self.jenisJeda == 'INS2':
                     self.onSwitchPanels('salah')
                 elif self.jenisJeda == 'OPN':
                     self.onSwitchPanels('main')
-                    data_responden = self.formIdentitas.getValues()
-                    self.sesiPenilaian.setResponden(data_responden)
-                    self.sesiPenilaian.prepareImages()
+                    # data_responden = self.formIdentitas.getValues()
+                    # self.sesiPenilaian.setResponden(data_responden)
+                    self.sesi += 1
+                    self.sesiPenilaian.prepare_images(self.sesi)
                     self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
                     self.sesiPenilaian.loadImage(None, 0)
                 elif self.jenisJeda == 'REST':
@@ -673,7 +629,6 @@ class ViewerFrame(wx.Frame):
                     self.jenisJeda = 'INS1'
                     self.sesiJeda.WritePesan(self.txtINS1)
                     self.onSwitchPanels('menu')
-                    self.wait = True
             elif abs(posx) <= neutral and not self.JOY_DO_SOMETHING:
                 self.JOY_DO_SOMETHING = True
             else:
@@ -699,124 +654,89 @@ class ViewerFrame(wx.Frame):
                     pass
             elif posx >= full and self.JOY_DO_SOMETHING:
                 self.JOY_DO_SOMETHING = False
+                self.LOCK_PANEL = True
                 self.onSwitchPanels('latihan')
-                self.sesiLatihan.prepareImages()
+                self.sesiLatihan.prepare_images(self.sesi)
                 self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
                 self.sesiLatihan.loadImage(None,0)
 
-    def hitung_rerata(self, valid_data):
-        data = []
-        total_response_akhir = sum([x[6] for x in valid_data])
-        avg_akhir = float(total_response_akhir) / float(len(valid_data))
-        total_response_awal = sum([x[5] for x in valid_data])
-        avg_awal = float(total_response_awal) / float(len(valid_data))
-        # Generate category and calculate average response time for each of them
-        # ekspresi dan warna
-        categ_list = [x[3:5] for x in valid_data]
-        categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
-        for c in categ:
-            categ_data = [i for i in valid_data if i[3:5] == c]
-            categ_data_len = len(categ_data)
-            categ_tot_resp_awal = sum([i[5] for i in categ_data])
-            categ_tot_resp_akhir = sum([i[6] for i in categ_data])
-            categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
-            categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
-            data.append(['RERATA', 'UNTUK', 'KATEGORI', c[0], c[1], categ_avg_resp_awal, categ_avg_resp_akhir])
-        # ras
-        categ_ras_i = [c for c in valid_data if c[1] == 'I']
-        categ_ras_c = [c for c in valid_data if c[1] == 'C']
-        len_i = len(categ_ras_i)
-        len_c = len(categ_ras_c)
-        ras_i_tot_resp_awal = sum([i[5] for i in categ_ras_i])
-        ras_c_tot_resp_awal = sum([i[5] for i in categ_ras_c])
-        ras_i_tot_resp_akhir = sum([i[6] for i in categ_ras_i])
-        ras_c_tot_resp_akhir = sum([i[6] for i in categ_ras_c])
-        ras_i_avg_resp_awal = float(ras_i_tot_resp_awal) / float(len_i)
-        ras_c_avg_resp_awal = float(ras_c_tot_resp_awal) / float(len_c)
-        ras_i_avg_resp_akhir = float(ras_i_tot_resp_akhir) / float(len_i)
-        ras_c_avg_resp_akhir = float(ras_c_tot_resp_akhir) / float(len_c)
-        data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'I', ras_i_avg_resp_awal, ras_i_avg_resp_akhir])
-        data.append(['RERATA', 'UNTUK', 'KATEGORI', 'RAS', 'C', ras_c_avg_resp_awal, ras_c_avg_resp_akhir])
-        # ras ekspresi gender
-        categ_list = [[x[1], x[3], x[2][0]] for x in valid_data]
-        categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
-        for c in categ:
-            categ_data = [i for i in valid_data if i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1]]
-            categ_data_len = len(categ_data)
-            categ_tot_resp_awal = sum([i[5] for i in categ_data])
-            categ_tot_resp_akhir = sum([i[6] for i in categ_data])
-            categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
-            categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
-            data.append(['RERATA', 'UNTUK', c[0], c[1], c[2], categ_avg_resp_awal, categ_avg_resp_akhir])
-        # ras ekspresi gender warna
-        categ_list = [[x[1], x[3], x[2][0], x[4]] for x in valid_data]
-        categ = [list(x) for x in set(tuple(x) for x in categ_list)]  # create unique list
-        for c in categ:
-            categ_data = [i for i in valid_data if
-                          i[1] == c[0] and i[2].startswith(c[2]) and i[3] == c[1] and i[4] == c[3]]
-            categ_data_len = len(categ_data)
-            categ_tot_resp_awal = sum([i[5] for i in categ_data])
-            categ_tot_resp_akhir = sum([i[6] for i in categ_data])
-            categ_avg_resp_awal = float(categ_tot_resp_awal) / float(categ_data_len)
-            categ_avg_resp_akhir = float(categ_tot_resp_akhir) / float(categ_data_len)
-            data.append(['RERATA UNTUK', c[0], c[1], c[2], c[3], categ_avg_resp_awal, categ_avg_resp_akhir])
-        data.append(['RERATA', 'KESELURUHAN:', '','','', avg_awal, avg_akhir])
-        return data
-
-    def writeScore(self, data):
+    def save(self, data):
         """
         :param data:
-        data[0] -> (list) identitas peserta
-        data[1] -> (list) nama kolom
-        data[2:] -> data hasil pengujian dengan format:
-                    0: timestamp
-                    1: ras
-                    2: gender
-                    3: ekspresi
-                    4: warna
-                    5: respon awal
-                    6: respon akhir
-                    7: keterangan('SALAH' kalo aksi tidak sesuai warna gambar, '' kalo benar)
+        data[0] -> (list) Judul kolom
+        data[1] -> (list) Subjudul kolom
+        data[2:] -> (list of tuple) data hasil pengujian dengan format:
+                    0: Jenis Crowd (Pull/Push - kombinasi crows)
+                    1: response
         """
+        def group_score(score):
+            """
+            Group the list by image_name and combine the score
+            :param score: list of tuple with format [('image_name', response_time)...]
+            :return: grouped score sorted by image_name
+            """
+            d = defaultdict(list)
+            for k, v in score:
+                d[k].append(v)
+            # Output: defaultdict(<type 'list'>, {'a': [1, 2, 3], 'c': [1, 2, 3], 'b': [1, 2, 3]})
+            # >>> d['a']
+            # [1, 2, 3]
+            # We flatten it into a list of list and later save it as csv
+            score_list = []
+            for name, score in d.iteritems():
+                data = [name]
+                data.extend(score)
+                score_list.append(data)
+            # >>> score_list
+            # [['a', 1, 2, 3], ['c', 1, 2, 3], ['b', 1, 2, 3]]
+            # return sorted by crowd name
+            score_list.sort(key=lambda x: x[0])
+            return score_list
+
+
+        def list_extend(list1, list2):
+            extended_list = list(list1) # create new list since list1 is a reference to list object
+            extended_list.extend(list2)
+            return extended_list
+
+
         if not len(data):
-            return False
-        # pastikan data hasil pengujian tidak tercemar
-        if any(len(x) != 8 for x in data[2:]):
             return False
         if not os.path.exists('hasil'):
             os.makedirs('hasil')
-        file_name = 'hasil/' + '_'.join(data[0][1:]) + '.csv'  #nama_id.csv
+        file_name = 'hasil/output.csv'
         # cek keadaan file, kalo tidak bisa diakses ganti nama file
+        score_list = group_score(data)
         try:
             f = open(file_name, 'ab')
         except IOError:
             ts = int(time.time())
-            file_name = 'hasil/' + 'DARURAT_' + '_'.join(data[0][1:]) + '_' + str(ts) + '.csv'
+            file_name = 'hasil/' + 'output_' + '_' + str(ts) + '.csv'
         else:
             f.close()
         print 'file name: ', file_name, data
-        if self.wait:
-            data[0].append('SESI 1')
-        else:
-            data[0].append('SESI 2')
+        # if self.wait:
+        #     data[0].append('SESI 1')
+        # else:
+        #     data[0].append('SESI 2')
         # amankan hasil pengujian
         with open(file_name, 'ab') as csvfile:
             scorewriter = csv.writer(csvfile)
-            scorewriter.writerows(data[0:])
-        # Mulai menghitung rerata
-        valid_data = [x for x in data[2:] if not x[7]]
-        if not len(valid_data):
-            return False
-        rerata = []
-        self.hasil.extend(valid_data)
-        rerata.extend(self.hitung_rerata(valid_data))
-        if not self.wait and self.hasil:
-            rerata.append(['RERATA', 'SEMUA', 'SESI'])
-            rerata.extend(self.hitung_rerata(self.hasil))
-        with open(file_name, 'ab') as csvfile:
-            scorewriter = csv.writer(csvfile)
-            scorewriter.writerows(rerata[0:])
-        return True
+            if self.sesi == 1:
+                scorewriter.writerow(['Identitas', '', '', '', '', '', 'Jenis Crowd', 'Waktu reaksi dalam miliseconds (pengulangan ke-)', '', '', '', '', '', '', '', '', '', '', ''])
+                scorewriter.writerow(['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', 'KODE BLOK', '', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
+                # TODO: ganti dengan identitas peserta
+                first_row = ['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', JENIS_BLOK[self.sesi]]
+                first_row.extend(score_list[0])
+            else:
+                first_row = ['', '', '', '', '', JENIS_BLOK[self.sesi]]
+                first_row.extend(score_list[0])
+            scorewriter.writerow(first_row)
+            score_list = score_list[1:]
+            padding = ['', '', '', '', '', '']
+            padded_score = [list_extend(padding, s) for s in score_list]
+            scorewriter.writerows(padded_score)
+
 
     def onSwitchPanels(self, window):
         """"""
@@ -868,7 +788,6 @@ class ViewerFrame(wx.Frame):
             self.formIdentitas.Hide()
             self.sesiPenilaian.Hide()
             self.sesiLatihan.Hide()
-            self.wait = True
         self.Update()
         self.Layout()
         self.Refresh()
