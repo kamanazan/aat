@@ -28,18 +28,21 @@ class AatImage:
             1: str(curr_path.glob('*1.jpg').next().resolve()),
             2: str(curr_path.glob('*2.jpg').next().resolve()),
             3: str(curr_path.glob('*3.jpg').next().resolve()),
+            9: wx.Image(1, 1) # blank image
         }
         self.wrong_image = str(curr_path.glob('*SALAH.jpg').next().resolve())
 
     def image_on_phase(self, scale):
         if scale <= 0.2:
             phase = 0
-        elif (scale > 0.2) and (scale <=0.5):
+        elif (scale > 0.2) and (scale <=0.4):
             phase = 1
-        elif (scale > 0.5) and (scale <= 0.9):
+        elif (scale > 0.4) and (scale <= 0.6):
             phase = 2
-        else:
+        elif (scale > 0.6) and (scale <= 0.9):
             phase = 3
+        else:
+            phase = 9
         return self.phases[phase]
 
     def wrong_image(self):
@@ -114,7 +117,7 @@ class ImagePanel(wx.Panel):
         self.image_name = self.current_image
         self.isWrong = self.current_image.action != action if action and not self.isWrong else self.isWrong
         self.displayed_image = self.current_image.wrong_image if self.isWrong else self.current_image.image_on_phase(scale)
-        print 'Displayed Image:', self.displayed_image
+        print 'Displayed Image:', self.displayed_image[-10:] if isinstance(self.displayed_image, str) else 'BLANK'
         self.imageCtrl.SetBitmap(wx.Bitmap(self.displayed_image))
         self.imgSizer.Remove(0)
         self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
@@ -160,7 +163,6 @@ class FormPenilaian(ImagePanel):
         response = (time.time() - self.startTime) * 1000
         if self.isWrong:
             response *= -1.0
-        print 'RESPON AKHIR:', response
         score_set = (str(info), response)
         self.score.append(score_set)
         self.DONE = True
@@ -168,7 +170,6 @@ class FormPenilaian(ImagePanel):
     def calculateFirstResponse(self):
         # TODO: mungkin ga dipake
         self.firstResponse = (time.time() - self.startTime) * 1000
-        print 'RESPON AWAL: ', self.firstResponse
 
     def resetFirstResponse(self):
         self.firstResponse = 0.0
@@ -345,10 +346,10 @@ class FormContoh(wx.Panel):
         self.title2.SetFont(font)
         self.title3.SetFont(font)
 
-        self.imgs = wx.Image('images/Latihan_S.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
-        self.imgg = wx.Image('images/Latihan_G.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
-        self.imageCtrls = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgs)), style=wx.ALIGN_BOTTOM)
-        self.imageCtrlg = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgg)), style=wx.ALIGN_CENTER)
+        # self.imgs = wx.Image('images/Latihan_S.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
+        # self.imgg = wx.Image('images/Latihan_G.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
+        # self.imageCtrls = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgs)), style=wx.ALIGN_BOTTOM)
+        # self.imageCtrlg = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgg)), style=wx.ALIGN_CENTER)
 
         foto1 = wx.BoxSizer(wx.VERTICAL)
         foto2 = wx.BoxSizer(wx.VERTICAL)
@@ -360,8 +361,8 @@ class FormContoh(wx.Panel):
         foto1.Add((10,10))
         foto2.Add(self.title2, 0, wx.ALIGN_CENTER, 0)
         foto2.Add((10,10))
-        foto1.Add(self.imageCtrls, 0, wx.ALIGN_CENTER, 0)
-        foto2.Add(self.imageCtrlg, 0, wx.ALIGN_CENTER, 0)
+        # foto1.Add(self.imageCtrls, 0, wx.ALIGN_CENTER, 0)
+        # foto2.Add(self.imageCtrlg, 0, wx.ALIGN_CENTER, 0)
         fotoSizer.Add(foto1,0, wx.ALIGN_CENTER, 0)
         fotoSizer.Add((20,20))
         fotoSizer.Add(foto2,0, wx.ALIGN_CENTER, 0)
@@ -463,6 +464,7 @@ class ViewerFrame(wx.Frame):
         self.Bind(wx.EVT_JOY_MOVE, self.onMove)
         self.JOY_DO_SOMETHING = True
         self.NEUTRAL = True
+        self.IMAGE_TRANSITION = False
         self.hasil = []
 
     def onMove(self, event):
@@ -482,7 +484,6 @@ class ViewerFrame(wx.Frame):
         # this cannot be exactly 0.0 as the x/y axis rarely have that value in neutral position
         neutral = 0.2
         full = 0.9
-        # print "pos:",posx, posy, x, y
 
         if self.formIdentitas.IsShown():
             if self.LOCK_PANEL:
@@ -508,6 +509,7 @@ class ViewerFrame(wx.Frame):
                 else:
                     pass
             else:
+
                 if posy > neutral and self.JOY_DO_SOMETHING:
                     self.JOY_DO_SOMETHING = False if posy >= full else True
                     scale = abs(posy)
@@ -549,57 +551,68 @@ class ViewerFrame(wx.Frame):
                 else:
                     pass
             else:
-                # Joystick moves and image is zoomed in/out
-                if abs(posy) > neutral and self.NEUTRAL:
-                    self.NEUTRAL = False
-                    self.sesiPenilaian.calculateFirstResponse()
-                if posy > neutral and self.JOY_DO_SOMETHING:
-                    self.JOY_DO_SOMETHING = False if posy >= full else True
-                    scale = abs(posy)
-                    if posy >= full:
-                        self.sesiPenilaian.calculateResponse()
-                        scale = 1.0
-                    assert not self.NEUTRAL
-                    self.sesiPenilaian.loadImage('PUSH', scale)
-                elif posy < -neutral and self.JOY_DO_SOMETHING:
-                    self.JOY_DO_SOMETHING = False if posy <= -full else True
-                    scale = abs(posy)
-                    if posy <= -full:
-                        self.sesiPenilaian.calculateResponse()
-                        scale = 1.0
-                    assert not self.NEUTRAL
-                    self.sesiPenilaian.loadImage('PULL', scale)
-                elif (abs(posy) <= neutral ) and self.JOY_DO_SOMETHING:
-                    # When joystick return to normal position before fully push/pull return image to original size
-                    self.sesiPenilaian.loadImage(None, 0)
-                elif (abs(posy) <= neutral ) and not self.JOY_DO_SOMETHING:
-                    self.NEUTRAL = True
-                    self.JOY_DO_SOMETHING = True
-                    if not self.sesiPenilaian.shouldStop():
-                        print 'NEXT!', posx, posy, abs(posy)
-                        if self.sesiPenilaian.isWrong:
-                            self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.current_image)
-                        self.sesiPenilaian.resetFirstResponse()
-                        self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+                if not self.IMAGE_TRANSITION:
+                    # Joystick moves and image is zoomed in/out
+                    if abs(posy) > neutral and self.NEUTRAL:
+                        self.NEUTRAL = False
+                        self.sesiPenilaian.calculateFirstResponse()
+                    if posy > neutral and self.JOY_DO_SOMETHING:
+                        self.JOY_DO_SOMETHING = False if posy >= full else True
+                        scale = abs(posy)
+                        if posy >= full:
+                            self.sesiPenilaian.calculateResponse()
+                            scale = 1.0
+                        assert not self.NEUTRAL
+                        self.sesiPenilaian.loadImage('PUSH', scale)
+                    elif posy < -neutral and self.JOY_DO_SOMETHING:
+                        self.JOY_DO_SOMETHING = False if posy <= -full else True
+                        scale = abs(posy)
+                        if posy <= -full:
+                            self.sesiPenilaian.calculateResponse()
+                            scale = 1.0
+                        assert not self.NEUTRAL
+                        self.sesiPenilaian.loadImage('PULL', scale)
+                    elif (abs(posy) <= neutral ) and self.JOY_DO_SOMETHING:
+                        # When joystick return to normal position before fully push/pull return image to original size
                         self.sesiPenilaian.loadImage(None, 0)
-                        self.sesiPenilaian.startTime = time.time()
-                    elif self.sesiPenilaian.shouldStop():
-                        self.sesiPenilaian.resetFirstResponse()
-                        self.save(self.sesiPenilaian.getScore())
-                        self.sesiPenilaian.clearScore()
-                        self.sesiPenilaian.wrongImages = []
-                        print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                        if self.sesi < 3:
-                            self.jenisJeda = 'REST'
-                            self.sesiJeda.WritePesan(self.txtREST)
-                            self.onSwitchPanels('jeda')
-                        else:
-                            self.hasil = []
-                            self.sesiJeda.WritePesan(self.txtEND)
-                            self.onSwitchPanels('jeda')
-                            self.jenisJeda = 'END'
+                    elif (abs(posy) <= neutral ) and not self.JOY_DO_SOMETHING:
+                        self.NEUTRAL = True
+                        self.JOY_DO_SOMETHING = True
+                        self.IMAGE_TRANSITION = True
+                    else:
+                        pass
                 else:
-                    pass
+                    if posx >= full and self.NEUTRAL:
+                        self.NEUTRAL = False
+                        if not self.sesiPenilaian.shouldStop():
+                            print 'Load Next Image'
+                            if self.sesiPenilaian.isWrong:
+                                self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.current_image)
+                            self.sesiPenilaian.resetFirstResponse()
+                            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+                            self.sesiPenilaian.loadImage(None, 0)
+                            self.sesiPenilaian.startTime = time.time()
+                        elif self.sesiPenilaian.shouldStop():
+                            self.IMAGE_TRANSITION = False
+                            self.sesiPenilaian.resetFirstResponse()
+                            self.save(self.sesiPenilaian.getScore())
+                            self.sesiPenilaian.clearScore()
+                            self.sesiPenilaian.wrongImages = []
+                            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
+                            if self.sesi < 3:
+                                self.jenisJeda = 'REST'
+                                self.sesiJeda.WritePesan(self.txtREST)
+                                self.onSwitchPanels('jeda')
+                            else:
+                                self.hasil = []
+                                self.sesiJeda.WritePesan(self.txtEND)
+                                self.onSwitchPanels('jeda')
+                                self.jenisJeda = 'END'
+                    elif posx <= neutral and not self.NEUTRAL:
+                        self.NEUTRAL = True
+                        self.IMAGE_TRANSITION = False
+                    else:
+                        pass
         elif self.sesiJeda.IsShown():
             print self.jenisJeda
             if posx >= full and self.JOY_DO_SOMETHING:
@@ -623,7 +636,7 @@ class ViewerFrame(wx.Frame):
                     self.sesiPenilaian.loadImage(None, 0)
                 elif self.jenisJeda == 'REST':
                     self.jenisJeda = 'OPN'
-                    self.sesiJeda.WritePesan(self.txtOPN)
+                    self.sesiJeda.WritePesan(JENIS_BLOK[self.sesi])
                     self.onSwitchPanels('jeda')
                 elif self.jenisJeda == 'END':
                     self.jenisJeda = 'INS1'
@@ -655,6 +668,7 @@ class ViewerFrame(wx.Frame):
             elif posx >= full and self.JOY_DO_SOMETHING:
                 self.JOY_DO_SOMETHING = False
                 self.LOCK_PANEL = True
+                self.sesi = 0
                 self.onSwitchPanels('latihan')
                 self.sesiLatihan.prepare_images(self.sesi)
                 self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
@@ -695,6 +709,7 @@ class ViewerFrame(wx.Frame):
 
 
         def list_extend(list1, list2):
+            # TODO: RESEARCH find pythonic way to do this
             extended_list = list(list1) # create new list since list1 is a reference to list object
             extended_list.extend(list2)
             return extended_list
@@ -714,19 +729,15 @@ class ViewerFrame(wx.Frame):
             file_name = 'hasil/' + 'output_' + '_' + str(ts) + '.csv'
         else:
             f.close()
-        print 'file name: ', file_name, data
-        # if self.wait:
-        #     data[0].append('SESI 1')
-        # else:
-        #     data[0].append('SESI 2')
-        # amankan hasil pengujian
+
         with open(file_name, 'ab') as csvfile:
             scorewriter = csv.writer(csvfile)
             if self.sesi == 1:
                 scorewriter.writerow(['Identitas', '', '', '', '', '', 'Jenis Crowd', 'Waktu reaksi dalam miliseconds (pengulangan ke-)', '', '', '', '', '', '', '', '', '', '', ''])
                 scorewriter.writerow(['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', 'KODE BLOK', '', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
                 # TODO: ganti dengan identitas peserta
-                first_row = ['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', JENIS_BLOK[self.sesi]]
+                nomor = time.strftime(" %d/%m/%Y %H:%M:%S", time.localtime())
+                first_row = [nomor, 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', JENIS_BLOK[self.sesi]]
                 first_row.extend(score_list[0])
             else:
                 first_row = ['', '', '', '', '', JENIS_BLOK[self.sesi]]
