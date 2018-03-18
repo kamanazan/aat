@@ -218,82 +218,94 @@ class FormIdentitas(wx.Panel):
         # Add a panel so it looks correct on all platforms
         wx.Panel.__init__(self, parent)
         self.SetBackgroundColour('WHITE')
-        title = wx.StaticText(self, wx.ID_ANY, 'Masukan identitas')
+        title = wx.StaticText(self, wx.ID_ANY, 'Mohon isilah form identitas di bawah ini')
+        font_underline = wx.Font(14,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        font_underline.SetUnderlined(True)
+        title.SetFont(font_underline)
         lblSize = (50, -1)
 
-        labelOne = wx.StaticText(self, wx.ID_ANY, 'ID')
-        inputTxtOne = wx.TextCtrl(self, wx.ID_ANY, '')
+        label_nopeserta = wx.StaticText(self, wx.ID_ANY, 'No. Peserta')
+        input_nopeserta = wx.TextCtrl(self, wx.ID_ANY, '', size=(500, -1))
 
-        labelTwo = wx.StaticText(self, wx.ID_ANY, 'Nama')
-        inputTxtTwo = wx.TextCtrl(self, wx.ID_ANY, '')
+        label_nama = wx.StaticText(self, wx.ID_ANY, 'Nama')
+        input_nama = wx.TextCtrl(self, wx.ID_ANY, '', size=(500, -1))
 
-        labelThree = wx.StaticText(self, wx.ID_ANY, 'Gender')
+        label_gender= wx.StaticText(self, wx.ID_ANY, 'Jenis Kelamin')
+        gender_choices = ['Laki-laki', 'Perempuan']
+        input_gender = wx.RadioBox(self, wx.ID_ANY, choices=gender_choices)
 
-        genderChoices = ['L', 'P']
-        inputTxtThree = wx.Choice(self, wx.ID_ANY, choices=genderChoices)
+        label_usia = wx.StaticText(self, wx.ID_ANY, 'Usia')
+        input_usia = wx.TextCtrl(self, wx.ID_ANY, '', size=(500, -1))
 
-        labelFour = wx.StaticText(self, wx.ID_ANY, 'Category')
+        label_sekolah = wx.StaticText(self, wx.ID_ANY, 'Asal Sekolah')
+        input_sekolah = wx.TextCtrl(self, wx.ID_ANY, '', size=(500, -1))
 
-        categoryChoices = ['A', 'B']
-        inputTxtFour = wx.Choice(self, wx.ID_ANY, choices=categoryChoices)
-
-        self.idresponden = inputTxtOne
-        self.nama = inputTxtTwo
-        self.genchoice = inputTxtThree
-        self.catchoice = inputTxtFour
+        self.idresponden = input_nopeserta
+        self.nama = input_nama
+        self.genchoice = input_gender
+        self.usia = input_usia
+        self.sekolah = input_sekolah
 
         topSizer = wx.BoxSizer(wx.VERTICAL)
         titleSizer = wx.BoxSizer(wx.HORIZONTAL)
-        gridSizer = wx.GridSizer(rows=4, cols=2, hgap=5, vgap=5)
+        gridSizer = wx.GridSizer(rows=5, cols=2, hgap=5, vgap=5)
         inputOneSizer = wx.BoxSizer(wx.HORIZONTAL)
         inputTwoSizer = wx.BoxSizer(wx.HORIZONTAL)
         inputThreeSizer = wx.BoxSizer(wx.HORIZONTAL)
         inputFourSizer = wx.BoxSizer(wx.HORIZONTAL)
+        input_sekolah_sizer = wx.BoxSizer(wx.HORIZONTAL)
         btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 
         titleSizer.Add(title, 0, wx.ALIGN_CENTER, 5)
 
         inputOneSizer.Add((20, 20), proportion=1)  # this is a spacer
-        inputOneSizer.Add(labelOne, 0, wx.ALL | wx.ALIGN_LEFT, 2)
+        inputOneSizer.Add(label_nopeserta, 0, wx.ALL | wx.ALIGN_LEFT, 2)
 
         inputTwoSizer.Add((20, 20), 1, wx.EXPAND)  # this is a spacer
-        inputTwoSizer.Add(labelTwo, 0, wx.ALL | wx.ALIGN_LEFT, 2)
+        inputTwoSizer.Add(label_nama, 0, wx.ALL | wx.ALIGN_LEFT, 2)
 
         inputThreeSizer.Add((20, 20), 1, wx.EXPAND)  # this is a spacer
-        inputThreeSizer.Add(labelThree, 0, wx.ALL | wx.ALIGN_LEFT, 2)
+        inputThreeSizer.Add(label_gender, 0, wx.ALL | wx.ALIGN_LEFT, 2)
 
         inputFourSizer.Add((20, 20), 1, wx.EXPAND)  # this is a spacer
-        inputFourSizer.Add(labelFour, 0, wx.ALL | wx.ALIGN_LEFT, 2)
+        inputFourSizer.Add(label_usia, 0, wx.ALL | wx.ALIGN_LEFT, 2)
 
-        # Add the 3-item sizer to the gridsizer and
+        input_sekolah_sizer.Add((20, 20), 1, wx.EXPAND)  # this is a spacer
+        input_sekolah_sizer.Add(label_sekolah, 0, wx.ALL | wx.ALIGN_LEFT, 2)
+
         gridSizer.Add(inputOneSizer, 0, wx.ALIGN_LEFT)
-        # Set the TextCtrl to expand on resize
-        gridSizer.Add(inputTxtOne, 0, wx.ALIGN_LEFT | wx.EXPAND)
+        gridSizer.Add(input_nopeserta, 0, wx.ALIGN_LEFT)
+
         gridSizer.Add(inputTwoSizer, 0, wx.ALIGN_LEFT)
-        gridSizer.Add(inputTxtTwo, 0, wx.ALIGN_LEFT | wx.EXPAND)
+        gridSizer.Add(input_nama, 0, wx.ALIGN_LEFT)
+
         gridSizer.Add(inputThreeSizer, 0, wx.ALIGN_LEFT)
-        gridSizer.Add(inputTxtThree, 0, wx.ALIGN_LEFT)
+        gridSizer.Add(input_gender, 0, wx.ALIGN_LEFT)
+
         gridSizer.Add(inputFourSizer, 0, wx.ALIGN_LEFT)
-        gridSizer.Add(inputTxtFour, 0, wx.ALIGN_LEFT)
+        gridSizer.Add(input_usia, 0, wx.ALIGN_LEFT)
+
+        gridSizer.Add(input_sekolah_sizer, 0, wx.ALIGN_LEFT)
+        gridSizer.Add(input_sekolah, 0, wx.ALIGN_LEFT)
 
         self.pesan = 'Gerakan Joystick ke kanan untuk melanjutkan'
         self.title = wx.StaticText(self, wx.ID_ANY, label=self.pesan, style=wx.ALIGN_CENTER)
-        font = wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        font = wx.Font(20,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.title.SetFont(font)
         topSizer.Add(titleSizer, 0, wx.ALIGN_CENTER)
-        topSizer.Add(wx.StaticLine(self), 0, wx.ALL | wx.EXPAND, 5)
-        topSizer.Add(gridSizer, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        topSizer.Add((20, 20), 0, wx.ALL | wx.EXPAND, 5)
+        topSizer.Add(gridSizer, 0, wx.ALIGN_CENTER, 5)
         topSizer.Add(wx.StaticLine(self), 0, wx.ALL | wx.EXPAND, 5)
         topSizer.Add(self.title, 0, wx.ALIGN_CENTER, 5)  #topSizer.Add(btnSizer, 0, wx.ALL|wx.CENTER, 5)
         self.SetSizer(topSizer)
         topSizer.Fit(self)
 
-    def getValues(self):
+    def get_values(self):
         nama = str(self.nama.GetValue())
-        idresponden = str(self.idresponden.GetValue())
         gender = str(self.genchoice.GetStringSelection())
-        category = str(self.catchoice.GetStringSelection())
-        responden_data = ['IDENTITAS:', idresponden, nama, gender, category]
+        usia = str(self.usia.GetValue())
+        sekolah = str(self.sekolah.GetValue())
+        responden_data = [nama, gender, usia, sekolah]
 
         return responden_data
 
@@ -313,7 +325,7 @@ class FormJeda(wx.Panel):
 
         self.pesan = 'PESAN SPONSOR'
         self.title = wx.StaticText(self, wx.ID_ANY, label=self.pesan, style=wx.ALIGN_CENTER)
-        font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        font = wx.Font(22,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.title.SetFont(font)
 
         titleSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
@@ -338,7 +350,7 @@ class FormContoh(wx.Panel):
         self.pesan_contoh1 = 'Contoh Foto Sephia'
         self.pesan_contoh2 = 'Contoh Foto Hitam Putih'
         self.pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
-        font = wx.Font(22, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        font = wx.Font(22,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.title1 = wx.StaticText(self, wx.ID_ANY, label=self.pesan_contoh1, style=wx.ALIGN_CENTER)
         self.title2 = wx.StaticText(self, wx.ID_ANY, label=self.pesan_contoh2, style=wx.ALIGN_CENTER)
         self.title3 = wx.StaticText(self, wx.ID_ANY, label=self.pesan_next, style=wx.ALIGN_CENTER)
@@ -465,6 +477,7 @@ class ViewerFrame(wx.Frame):
         self.JOY_DO_SOMETHING = True
         self.NEUTRAL = True
         self.IMAGE_TRANSITION = False
+        self.IMAGE_TRANSITION_TIMEOUT = 0 # WHEN the timeout occure (10 seconds after reaching NEUTRAL)
         self.hasil = []
 
     def onMove(self, event):
@@ -737,7 +750,7 @@ class ViewerFrame(wx.Frame):
                 scorewriter.writerow(['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', 'KODE BLOK', '', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
                 # TODO: ganti dengan identitas peserta
                 nomor = time.strftime(" %d/%m/%Y %H:%M:%S", time.localtime())
-                first_row = [nomor, 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', JENIS_BLOK[self.sesi]]
+                first_row = [nomor, str(self.formIdentitas.nama.GetValue()), str(self.formIdentitas.genchoice.GetStringSelection()), str(self.formIdentitas.usia.GetValue()), str(self.formIdentitas.sekolah.GetValue()), JENIS_BLOK[self.sesi]]
                 first_row.extend(score_list[0])
             else:
                 first_row = ['', '', '', '', '', JENIS_BLOK[self.sesi]]
