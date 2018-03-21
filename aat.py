@@ -108,7 +108,6 @@ class ImagePanel(wx.Panel):
     def shouldStop(self):
         return len(self.images) == 0
 
-
     def loadImage(self, action, scale):
         """
         action: 'PUSH' or 'PULL', determine whether the image should be zoomed out/zoomed in
@@ -300,12 +299,14 @@ class FormIdentitas(wx.Panel):
         self.SetSizer(topSizer)
         topSizer.Fit(self)
 
-    def get_values(self):
+    @property
+    def identitas_peserta(self):
+        idresponden = str(self.idresponden.GetValue())
         nama = str(self.nama.GetValue())
         gender = str(self.genchoice.GetStringSelection())
         usia = str(self.usia.GetValue())
         sekolah = str(self.sekolah.GetValue())
-        responden_data = [nama, gender, usia, sekolah]
+        responden_data = [idresponden, nama, gender, usia, sekolah, JENIS_BLOK[1]]
 
         return responden_data
 
@@ -730,8 +731,6 @@ class ViewerFrame(wx.Frame):
         if not os.path.exists('hasil'):
             os.makedirs('hasil')
         file_name = 'hasil/output.csv'
-        file_path = Path(file_name)
-        is_exist = file_path.exists()
         # cek keadaan file, kalo tidak bisa diakses ganti nama file
         score_list = group_score(data)
         try:
@@ -741,6 +740,7 @@ class ViewerFrame(wx.Frame):
             file_name = 'hasil/' + 'output_' + '_' + str(ts) + '.csv'
         else:
             f.close()
+        is_exist = os.path.exists(file_name)
 
         with open(file_name, 'ab') as csvfile:
             scorewriter = csv.writer(csvfile)
@@ -756,7 +756,7 @@ class ViewerFrame(wx.Frame):
                      'KODE BLOK', '', '1', '2', '3', '4', '5', '6', '7', '8',
                      '9', '10', '11', '12'])
             if self.sesi == 1:
-                first_row = [str(self.formIdentitas.idresponden.GetValue()), str(self.formIdentitas.nama.GetValue()), str(self.formIdentitas.genchoice.GetStringSelection()), str(self.formIdentitas.usia.GetValue()), str(self.formIdentitas.sekolah.GetValue()), JENIS_BLOK[self.sesi]]
+                first_row = self.formIdentitas.identitas_peserta
                 first_row.extend(score_list[0])
             else:
                 first_row = ['', '', '', '', '', JENIS_BLOK[self.sesi]]
