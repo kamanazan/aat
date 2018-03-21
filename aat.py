@@ -325,7 +325,7 @@ class FormJeda(wx.Panel):
 
         self.pesan = 'PESAN SPONSOR'
         self.title = wx.StaticText(self, wx.ID_ANY, label=self.pesan, style=wx.ALIGN_CENTER)
-        font = wx.Font(22,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        font = wx.Font(28,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.title.SetFont(font)
 
         titleSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
@@ -586,16 +586,53 @@ class ViewerFrame(wx.Frame):
                         assert not self.NEUTRAL
                         self.sesiPenilaian.loadImage('PULL', scale)
                     elif (abs(posy) <= neutral ) and self.JOY_DO_SOMETHING:
-                        # When joystick return to normal position before fully push/pull return image to original size
+                        # TODO: 21 Mar 2018, Test FIRST and then refactor
+                        # When joystick return to normal position before
+                        # fully push/pull return image to original size
+                        if self.sesiPenilaian.isWrong:
+                            self.NEUTRAL = True
+                            self.JOY_DO_SOMETHING = True
+                            self.IMAGE_TRANSITION = True
                         self.sesiPenilaian.loadImage(None, 0)
                     elif (abs(posy) <= neutral ) and not self.JOY_DO_SOMETHING:
                         self.NEUTRAL = True
                         self.JOY_DO_SOMETHING = True
                         self.IMAGE_TRANSITION = True
+                        # Set timeout for 10 seconds
+                        self.IMAGE_TRANSITION_TIMEOUT = time.time() + 10
                     else:
                         pass
                 else:
-                    if posx >= full and self.NEUTRAL:
+                    # TODO: 21 Mar 2018 find pythonic way for this
+                    curr_time = time.time()
+                    time_remaining = self.IMAGE_TRANSITION_TIMEOUT - curr_time
+                    if time_remaining < 0:
+                        # TODO: 21 Mar 2018 possible refactor
+                        if not self.sesiPenilaian.shouldStop():
+                            print 'Load Next Image'
+                            if self.sesiPenilaian.isWrong:
+                                self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.current_image)
+                            self.sesiPenilaian.resetFirstResponse()
+                            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+                            self.sesiPenilaian.loadImage(None, 0)
+                            self.sesiPenilaian.startTime = time.time()
+                        elif self.sesiPenilaian.shouldStop():
+                            self.IMAGE_TRANSITION = False
+                            self.sesiPenilaian.resetFirstResponse()
+                            self.save(self.sesiPenilaian.getScore())
+                            self.sesiPenilaian.clearScore()
+                            self.sesiPenilaian.wrongImages = []
+                            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
+                            if self.sesi < 3:
+                                self.jenisJeda = 'REST'
+                                self.sesiJeda.WritePesan(self.txtREST)
+                                self.onSwitchPanels('jeda')
+                            else:
+                                self.hasil = []
+                                self.sesiJeda.WritePesan(self.txtEND)
+                                self.onSwitchPanels('jeda')
+                                self.jenisJeda = 'END'
+                    elif posx >= full and self.NEUTRAL:
                         self.NEUTRAL = False
                         if not self.sesiPenilaian.shouldStop():
                             print 'Load Next Image'
@@ -649,7 +686,7 @@ class ViewerFrame(wx.Frame):
                     self.sesiPenilaian.loadImage(None, 0)
                 elif self.jenisJeda == 'REST':
                     self.jenisJeda = 'OPN'
-                    self.sesiJeda.WritePesan(JENIS_BLOK[self.sesi])
+                    self.sesiJeda.WritePesan(JENIS_BLOK[self.sesi + 1])
                     self.onSwitchPanels('jeda')
                 elif self.jenisJeda == 'END':
                     self.jenisJeda = 'INS1'
@@ -683,9 +720,10 @@ class ViewerFrame(wx.Frame):
                 self.LOCK_PANEL = True
                 self.sesi = 0
                 self.onSwitchPanels('latihan')
-                self.sesiLatihan.prepare_images(self.sesi)
-                self.sesiLatihan.setCurrentImage(self.sesiLatihan.getRandomImage())
-                self.sesiLatihan.loadImage(None,0)
+                self.sesiPenilaian.prepare_images(self.sesi)
+                self.sesiPenilaian.setCurrentImage(
+                    self.sesiPenilaian.getRandomImage())
+                self.sesiPenilaian.loadImage(None, 0)
 
     def save(self, data):
         """
@@ -787,9 +825,9 @@ class ViewerFrame(wx.Frame):
             self.sesiJeda.Hide()
             self.contohGambar.Hide()
             self.contohSalah.Hide()
-            self.sesiLatihan.Show()
+            self.sesiLatihan.Hide()
             self.formIdentitas.Hide()
-            self.sesiPenilaian.Hide()
+            self.sesiPenilaian.Show()
         elif window == 'menu':
             self.sesiJeda.Hide()
             self.contohGambar.Hide()
