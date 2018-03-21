@@ -312,7 +312,6 @@ class FormIdentitas(wx.Panel):
     def onCancel(self, event):
         self.closeProgram()
 
-
     def closeProgram(self):
         self.Close()
 
@@ -720,19 +719,19 @@ class ViewerFrame(wx.Frame):
             score_list.sort(key=lambda x: x[0])
             return score_list
 
-
         def list_extend(list1, list2):
             # TODO: RESEARCH find pythonic way to do this
             extended_list = list(list1) # create new list since list1 is a reference to list object
             extended_list.extend(list2)
             return extended_list
 
-
         if not len(data):
             return False
         if not os.path.exists('hasil'):
             os.makedirs('hasil')
         file_name = 'hasil/output.csv'
+        file_path = Path(file_name)
+        is_exist = file_path.exists()
         # cek keadaan file, kalo tidak bisa diakses ganti nama file
         score_list = group_score(data)
         try:
@@ -745,12 +744,19 @@ class ViewerFrame(wx.Frame):
 
         with open(file_name, 'ab') as csvfile:
             scorewriter = csv.writer(csvfile)
+            if not is_exist:
+                # Tambah table header
+                scorewriter.writerow(
+                    ['Identitas', '', '', '', '', '', 'Jenis Crowd',
+                     'Waktu reaksi dalam miliseconds (pengulangan ke-)', '',
+                     '', '', '', '', '', '', '', '', '', ''])
+                # Tambah table sub-header
+                scorewriter.writerow(
+                    ['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH',
+                     'KODE BLOK', '', '1', '2', '3', '4', '5', '6', '7', '8',
+                     '9', '10', '11', '12'])
             if self.sesi == 1:
-                scorewriter.writerow(['Identitas', '', '', '', '', '', 'Jenis Crowd', 'Waktu reaksi dalam miliseconds (pengulangan ke-)', '', '', '', '', '', '', '', '', '', '', ''])
-                scorewriter.writerow(['NO', 'NAMA', 'JENIS KELAMIN', 'USIA', 'ASAL SEKOLAH', 'KODE BLOK', '', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
-                # TODO: ganti dengan identitas peserta
-                nomor = time.strftime(" %d/%m/%Y %H:%M:%S", time.localtime())
-                first_row = [nomor, str(self.formIdentitas.nama.GetValue()), str(self.formIdentitas.genchoice.GetStringSelection()), str(self.formIdentitas.usia.GetValue()), str(self.formIdentitas.sekolah.GetValue()), JENIS_BLOK[self.sesi]]
+                first_row = [str(self.formIdentitas.idresponden.GetValue()), str(self.formIdentitas.nama.GetValue()), str(self.formIdentitas.genchoice.GetStringSelection()), str(self.formIdentitas.usia.GetValue()), str(self.formIdentitas.sekolah.GetValue()), JENIS_BLOK[self.sesi]]
                 first_row.extend(score_list[0])
             else:
                 first_row = ['', '', '', '', '', JENIS_BLOK[self.sesi]]
@@ -760,7 +766,6 @@ class ViewerFrame(wx.Frame):
             padding = ['', '', '', '', '', '']
             padded_score = [list_extend(padding, s) for s in score_list]
             scorewriter.writerows(padded_score)
-
 
     def onSwitchPanels(self, window):
         """"""
