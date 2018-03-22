@@ -19,18 +19,32 @@ class AatImage:
         get list of image in current directory
         curr_path: PosixPAth object parent dir of the images, starts with push* / pull*
         """
-
-        self.action = 'PUSH' if curr_path.name.count('Push') else 'PULL'
-        self.category = curr_path.parents[0].name
-        # since glob is generator we use next() to get the first item and resolve() to get the full path
-        self.phases = {
-            0: str(curr_path.glob('*medium.jpg').next().resolve()),
-            1: str(curr_path.glob('*1.jpg').next().resolve()),
-            2: str(curr_path.glob('*2.jpg').next().resolve()),
-            3: str(curr_path.glob('*3.jpg').next().resolve()),
-            9: wx.Image(1, 1) # blank image
-        }
-        self.wrong_image = str(curr_path.glob('*SALAH.jpg').next().resolve())
+        # TODO: DRY
+        if curr_path:
+            self.action = 'PUSH' if curr_path.name.count('Push') else 'PULL'
+            self.category = curr_path.parents[0].name
+            # since glob is generator we use next() to get the first item
+            # and resolve() to get the full path
+            self.phases = {
+                0: str(curr_path.glob('*medium.jpg').next().resolve()),
+                1: str(curr_path.glob('*1.jpg').next().resolve()),
+                2: str(curr_path.glob('*2.jpg').next().resolve()),
+                3: str(curr_path.glob('*3.jpg').next().resolve()),
+                9: wx.Image(1, 1)  # blank image
+            }
+            self.wrong_image = str(
+                curr_path.glob('*SALAH.jpg').next().resolve())
+        else:
+            self.action = ''
+            self.category = ''
+            self.phases = {
+                0: wx.Image(1, 1),
+                1: wx.Image(1, 1),
+                2: wx.Image(1, 1),
+                3: wx.Image(1, 1),
+                9: wx.Image(1, 1)
+            }
+            self.wrong_image = ''
 
     def image_on_phase(self, scale):
         if scale <= 0.2:
@@ -44,9 +58,6 @@ class AatImage:
         else:
             phase = 9
         return self.phases[phase]
-
-    def wrong_image(self):
-        return self.wrong_image
 
     def __str__(self):
         return '%s - %s' % (self.action, self.category)
@@ -107,12 +118,6 @@ class ImagePanel(wx.Panel):
     def shouldStop(self):
         return len(self.images) == 0
 
-    def scale_image(self, scale):
-        if isinstance(self.current_image, AatImage):
-            return self.current_image.image_on_phase(scale)
-        else:
-            return self.current_image
-
     def loadImage(self, action, scale):
         """
         action: 'PUSH' or 'PULL', determine whether the image should be zoomed out/zoomed in
@@ -120,7 +125,7 @@ class ImagePanel(wx.Panel):
         """
         self.image_name = self.current_image
         self.isWrong = self.current_image.action != action if action and not self.isWrong else self.isWrong
-        self.displayed_image = self.current_image.wrong_image if self.isWrong else self.scale_image(scale)
+        self.displayed_image = self.current_image.wrong_image if self.isWrong else self.current_image.image_on_phase(scale)
         print 'Displayed Image:', self.displayed_image if isinstance(self.displayed_image, str) else 'BLANK'
         self.imageCtrl.SetBitmap(wx.Bitmap(self.displayed_image))
         self.imgSizer.Remove(0)
@@ -163,7 +168,6 @@ class FormIdentitas(wx.Panel):
         font_underline = wx.Font(14,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
         font_underline.SetUnderlined(True)
         title.SetFont(font_underline)
-        lblSize = (50, -1)
 
         label_nopeserta = wx.StaticText(self, wx.ID_ANY, 'No. Peserta')
         input_nopeserta = wx.TextCtrl(self, wx.ID_ANY, '', size=(500, -1))
@@ -171,7 +175,7 @@ class FormIdentitas(wx.Panel):
         label_nama = wx.StaticText(self, wx.ID_ANY, 'Nama')
         input_nama = wx.TextCtrl(self, wx.ID_ANY, '', size=(500, -1))
 
-        label_gender= wx.StaticText(self, wx.ID_ANY, 'Jenis Kelamin')
+        label_gender = wx.StaticText(self, wx.ID_ANY, 'Jenis Kelamin')
         gender_choices = ['Laki-laki', 'Perempuan']
         input_gender = wx.RadioBox(self, wx.ID_ANY, choices=gender_choices)
 
@@ -503,7 +507,7 @@ class ViewerFrame(wx.Frame):
                     # TODO: test this, not working bro(220318)
                     curr_time = time.time()
                     time_remaining = self.IMAGE_TRANSITION_TIMEOUT - curr_time
-
+                    print "TIME: ", time_remaining
                     if (posx >= full and self.NEUTRAL) or time_remaining < 0:
                         self.NEUTRAL = False
                         self.IMAGE_TRANSITION = False if self.sesiPenilaian.shouldStop() or time_remaining < 0 else self.IMAGE_TRANSITION
@@ -554,7 +558,7 @@ class ViewerFrame(wx.Frame):
                 elif self.jenisJeda == 'OPN':
                     self.sesi += 1
                     self.sesiPenilaian.prepare_images(self.sesi)
-                    self.sesiPenilaian.setCurrentImage(wx.Image(1, 1)) # TODO: ganti dengan AatImage()
+                    self.sesiPenilaian.setCurrentImage(AatImage(''))
                     self.sesiPenilaian.loadImage(None, 0)
                     self.onSwitchPanels('main')
                 elif self.jenisJeda == 'REST':
@@ -593,7 +597,7 @@ class ViewerFrame(wx.Frame):
                 self.LOCK_PANEL = True
                 self.sesi = 0
                 self.sesiPenilaian.prepare_images(self.sesi)
-                self.sesiPenilaian.setCurrentImage(wx.Image(1, 1)) # TODO: ganti dengan AatImage()
+                self.sesiPenilaian.setCurrentImage(AatImage(''))
                 self.sesiPenilaian.loadImage(None, 0)
                 self.onSwitchPanels('main')
 
