@@ -107,6 +107,12 @@ class ImagePanel(wx.Panel):
     def shouldStop(self):
         return len(self.images) == 0
 
+    def scale_image(self, scale):
+        if isinstance(self.current_image, AatImage):
+            return self.current_image.image_on_phase(scale)
+        else:
+            return self.current_image
+
     def loadImage(self, action, scale):
         """
         action: 'PUSH' or 'PULL', determine whether the image should be zoomed out/zoomed in
@@ -114,7 +120,7 @@ class ImagePanel(wx.Panel):
         """
         self.image_name = self.current_image
         self.isWrong = self.current_image.action != action if action and not self.isWrong else self.isWrong
-        self.displayed_image = self.current_image.wrong_image if self.isWrong else self.current_image.image_on_phase(scale)
+        self.displayed_image = self.current_image.wrong_image if self.isWrong else self.scale_image(scale)
         print 'Displayed Image:', self.displayed_image if isinstance(self.displayed_image, str) else 'BLANK'
         self.imageCtrl.SetBitmap(wx.Bitmap(self.displayed_image))
         self.imgSizer.Remove(0)
@@ -439,8 +445,9 @@ class ViewerFrame(wx.Frame):
                     pass
             else:
                 if posx >= full:
-                    data = self.formIdentitas.getValues()
-                    if any(not x for x in data[1:]):
+                    # TODO: handle data tidak lengkap
+                    data = self.formIdentitas.identitas_peserta
+                    if len(data) < 5:
                         self.formIdentitas.title.SetLabel('DATA TIDAK LENGKAP')
                     else:
                         self.JOY_DO_SOMETHING = False
@@ -493,7 +500,7 @@ class ViewerFrame(wx.Frame):
                     else:
                         pass
                 else:
-                    # TODO: test this
+                    # TODO: test this, not working bro(220318)
                     curr_time = time.time()
                     time_remaining = self.IMAGE_TRANSITION_TIMEOUT - curr_time
 
@@ -547,7 +554,7 @@ class ViewerFrame(wx.Frame):
                 elif self.jenisJeda == 'OPN':
                     self.sesi += 1
                     self.sesiPenilaian.prepare_images(self.sesi)
-                    self.sesiPenilaian.setCurrentImage(wx.Image(1, 1))
+                    self.sesiPenilaian.setCurrentImage(wx.Image(1, 1)) # TODO: ganti dengan AatImage()
                     self.sesiPenilaian.loadImage(None, 0)
                     self.onSwitchPanels('main')
                 elif self.jenisJeda == 'REST':
@@ -586,7 +593,7 @@ class ViewerFrame(wx.Frame):
                 self.LOCK_PANEL = True
                 self.sesi = 0
                 self.sesiPenilaian.prepare_images(self.sesi)
-                self.sesiPenilaian.setCurrentImage(wx.Image(1, 1))
+                self.sesiPenilaian.setCurrentImage(wx.Image(1, 1)) # TODO: ganti dengan AatImage()
                 self.sesiPenilaian.loadImage(None, 0)
                 self.onSwitchPanels('main')
 
