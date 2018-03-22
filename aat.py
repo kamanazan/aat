@@ -168,6 +168,33 @@ class ImagePanel(wx.Panel):
         self.score = []
 
 
+class FormOpening(wx.Panel):
+
+    def __init__(self, parent):
+        # Add a panel so it looks correct on all platforms
+        wx.Panel.__init__(self, parent)
+
+        self.pesan = '''
+Approach-Avoidance Task
+
+
+
+Program
+'''
+        self.title = wx.StaticText(self, wx.ID_ANY, label=self.pesan, style=wx.ALIGN_CENTER)
+        font = wx.Font(36,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        self.title.SetFont(font)
+
+        titleSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
+
+        titleSizer.Add(self.title, 0, wx.ALIGN_CENTER, 0)
+
+        self.SetSizer(titleSizer)
+        titleSizer.Fit(self)
+        self.Layout()
+        self.Refresh()
+
+
 class FormIdentitas(wx.Panel):
 
     def __init__(self, parent):
@@ -383,16 +410,20 @@ class ViewerFrame(wx.Frame):
     def __init__(self):
         """Constructor"""
         wx.Frame.__init__(self, None, wx.ID_ANY, title="Approach-Avoidance Task")
+        self.opening = FormOpening(self)
         self.formIdentitas = FormIdentitas(self)
         self.sesiPenilaian = ImagePanel(self)
         self.sesiJeda = FormJeda(self)
         self.contohGambar = FormContoh(self)
         self.contohSalah = FormContohSalah(self)
+
+        self.opening.Show()
         self.contohGambar.Hide()
         self.contohSalah.Hide()
         self.sesiJeda.Hide()
         self.sesiPenilaian.Hide()
-        self.formIdentitas.Show()
+        self.formIdentitas.Hide()
+
         self.folderPath = ""
         self.sesi = 0 # dipakai untuk menentukan jenis block, 0=Latihan, 1..3=Blok A..C
         self.latihan = True
@@ -407,23 +438,35 @@ class ViewerFrame(wx.Frame):
         self.dec = decimal.Decimal
         self.sesiJeda.WritePesan(self.txtINS1)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.opening, 1, wx.EXPAND)
         self.sizer.Add(self.formIdentitas, 1, wx.EXPAND)
         self.sizer.Add(self.contohGambar, 1, wx.EXPAND)
         self.sizer.Add(self.contohSalah, 1, wx.EXPAND)
         self.sizer.Add(self.sesiPenilaian, 1, wx.EXPAND)
         self.sizer.Add(self.sesiJeda, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
-        self.Show()
         self.sizer.Fit(self)
         self.ShowFullScreen(True)
         self.joystick = wx.adv.Joystick()
         self.joystick.SetCapture(self)
         self.Bind(wx.EVT_JOY_MOVE, self.onMove)
+        wx.CallLater(100, self.opening_splashscreen)
         self.JOY_DO_SOMETHING = True
         self.NEUTRAL = True
         self.IMAGE_TRANSITION = False
         self.IMAGE_TRANSITION_TIMEOUT = 0 # WHEN the timeout occure (10 seconds after reaching NEUTRAL)
         self.hasil = []
+        self.Show()
+
+    def opening_splashscreen(self):
+        print 'HERE!'
+        present = time.time() + 3
+        timeout = 3
+        while timeout > 0:
+            ct = time.time()
+            timeout = present - ct
+            print 'Timeout', timeout
+        self.onSwitchPanels('menu')
 
     def onMove(self, event):
         # Rules:
@@ -705,6 +748,7 @@ class ViewerFrame(wx.Frame):
             self.contohGambar.Hide()
             self.contohSalah.Hide()
             self.sesiPenilaian.Hide()
+            self.opening.Hide()
             self.formIdentitas.Show()
         elif window == 'contoh':
             self.sesiJeda.Hide()
