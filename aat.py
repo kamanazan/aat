@@ -90,9 +90,14 @@ class ImagePanel(wx.Panel):
         self.startTime = 0
         self.score = []
         # Preparing the layout
-        self.imgSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
+        self.imgSizer = wx.GridSizer(rows=2, cols=1, hgap=5, vgap=5)
         self.imageCtrl = wx.StaticBitmap(self, id=wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.displayed_image)))
+        pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
+        self.pesan_salah = wx.StaticText(
+            self, wx.ID_ANY, label=pesan_next, style=wx.ALIGN_CENTER)
+        self.pesan_salah.Hide()
         self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
+        self.imgSizer.Add(self.pesan_salah, 0, wx.ALIGN_CENTER, 5)
         self.imgSizer.Fit(self)
         self.SetSizer(self.imgSizer)
 
@@ -128,8 +133,13 @@ class ImagePanel(wx.Panel):
         self.displayed_image = self.current_image.wrong_image if self.isWrong else self.current_image.image_on_phase(scale)
         print 'Displayed Image:', self.displayed_image if isinstance(self.displayed_image, str) else 'BLANK'
         self.imageCtrl.SetBitmap(wx.Bitmap(self.displayed_image))
-        self.imgSizer.Remove(0)
-        self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
+        # TODO: test what will happen
+        # self.imgSizer.Remove(0)
+        # self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
+        if self.isWrong:
+            self.pesan_salah.Show()
+        else:
+            self.pesan_salah.Hide()
         self.Update()
         self.Layout()
         self.Refresh()
@@ -304,11 +314,6 @@ class FormContoh(wx.Panel):
         self.title2.SetFont(font)
         self.title3.SetFont(font)
 
-        # self.imgs = wx.Image('images/Latihan_S.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
-        # self.imgg = wx.Image('images/Latihan_G.jpeg', wx.BITMAP_TYPE_ANY).Scale(400,400)
-        # self.imageCtrls = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgs)), style=wx.ALIGN_BOTTOM)
-        # self.imageCtrlg = wx.StaticBitmap(self, wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.imgg)), style=wx.ALIGN_CENTER)
-
         foto1 = wx.BoxSizer(wx.VERTICAL)
         foto2 = wx.BoxSizer(wx.VERTICAL)
         tmpsizer = wx.BoxSizer(wx.VERTICAL)
@@ -319,8 +324,6 @@ class FormContoh(wx.Panel):
         foto1.Add((10,10))
         foto2.Add(self.title2, 0, wx.ALIGN_CENTER, 0)
         foto2.Add((10,10))
-        # foto1.Add(self.imageCtrls, 0, wx.ALIGN_CENTER, 0)
-        # foto2.Add(self.imageCtrlg, 0, wx.ALIGN_CENTER, 0)
         fotoSizer.Add(foto1,0, wx.ALIGN_CENTER, 0)
         fotoSizer.Add((20,20))
         fotoSizer.Add(foto2,0, wx.ALIGN_CENTER, 0)
