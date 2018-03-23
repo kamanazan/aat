@@ -2,6 +2,7 @@ import os
 from pathlib2 import Path
 import wx
 import wx.adv
+from wx.lib.mixins.inspection import InspectionMixin
 
 import random
 import time
@@ -90,14 +91,22 @@ class ImagePanel(wx.Panel):
         self.startTime = 0
         self.score = []
         # Preparing the layout
-        self.imgSizer = wx.GridSizer(rows=2, cols=1, hgap=5, vgap=5)
+        self.imgSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
+        # self.imgSizer = wx.BoxSizer(wx.VERTICAL)
         self.imageCtrl = wx.StaticBitmap(self, id=wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.displayed_image)))
+
         pesan_next = 'Gerakan Joystick ke kanan untuk melanjutkan'
         self.pesan_salah = wx.StaticText(
             self, wx.ID_ANY, label=pesan_next, style=wx.ALIGN_CENTER)
+        font = wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        self.pesan_salah.SetFont(font)
+        self.pesan_salah.SetForegroundColour('WHITE')
         self.pesan_salah.Hide()
-        self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
-        self.imgSizer.Add(self.pesan_salah, 0, wx.ALIGN_CENTER, 5)
+        temp_sizer = wx.BoxSizer(wx.VERTICAL)
+        temp_sizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 0)
+        temp_sizer.AddSpacer(20)
+        temp_sizer.Add(self.pesan_salah, 0, wx.ALIGN_CENTER, 0)
+        self.imgSizer.Add(temp_sizer, 0, wx.ALIGN_CENTER, 0)
         self.imgSizer.Fit(self)
         self.SetSizer(self.imgSizer)
 
@@ -137,6 +146,7 @@ class ImagePanel(wx.Panel):
         # self.imgSizer.Remove(0)
         # self.imgSizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 5)
         if self.isWrong:
+
             self.pesan_salah.Show()
         else:
             self.pesan_salah.Hide()
@@ -173,26 +183,31 @@ class FormOpening(wx.Panel):
     def __init__(self, parent):
         # Add a panel so it looks correct on all platforms
         wx.Panel.__init__(self, parent)
-
-        self.pesan = '''
-Approach-Avoidance Task
-
-
-
-Program
-'''
-        self.title = wx.StaticText(self, wx.ID_ANY, label=self.pesan, style=wx.ALIGN_CENTER)
+        self.SetBackgroundColour('WHITE')
+        title_label = 'APPROACH-AVOIDANCE TASK'
+        subtitle_label = 'CROWD FACIAL EXPRESSION'
+        title = wx.StaticText(self, wx.ID_ANY, label=title_label, style=wx.ALIGN_CENTER)
         font = wx.Font(36,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
-        self.title.SetFont(font)
+        title.SetFont(font)
+        title.SetForegroundColour('BLACK')
 
-        titleSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
+        subtitle = wx.StaticText(self, wx.ID_ANY, label=subtitle_label, style=wx.ALIGN_CENTER)
+        font = wx.Font(28, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        subtitle.SetFont(font)
+        subtitle.SetForegroundColour('GREY')
 
-        titleSizer.Add(self.title, 0, wx.ALIGN_CENTER, 0)
+        titleSizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.SetSizer(titleSizer)
-        titleSizer.Fit(self)
-        self.Layout()
-        self.Refresh()
+        titleSizer.Add(title, 0, wx.ALIGN_CENTER, 0)
+        titleSizer.AddSpacer(20)
+        titleSizer.Add(subtitle, 0, wx.ALIGN_CENTER, 0)
+        # titleSizer.Fit(self)
+        sizer = wx.GridSizer(rows=1, cols=1, hgap=0, vgap=0)
+        sizer.Add(titleSizer, 0, wx.ALIGN_CENTER, 0)
+        sizer.Fit(self)
+        # self.Layout()
+        # self.Refresh()
+        self.SetSizer(sizer)
 
 
 class FormIdentitas(wx.Panel):
@@ -460,13 +475,20 @@ class ViewerFrame(wx.Frame):
 
     def opening_splashscreen(self):
         print 'HERE!'
-        present = time.time() + 3
-        timeout = 3
+        present = time.time() + 2
+        timeout = 2
         while timeout > 0:
             ct = time.time()
             timeout = present - ct
             print 'Timeout', timeout
-        self.onSwitchPanels('menu')
+        # self.onSwitchPanels('menu')
+
+        #skip
+        self.sesi = 0
+        self.sesiPenilaian.prepare_images(self.sesi)
+        self.sesiPenilaian.setCurrentImage(AatImage(''))
+        self.sesiPenilaian.loadImage(None, 0)
+        self.onSwitchPanels('main')
 
     def onMove(self, event):
         # Rules:
@@ -495,10 +517,12 @@ class ViewerFrame(wx.Frame):
                     pass
             else:
                 if posx >= full:
-                    # TODO: handle data tidak lengkap
                     data = self.formIdentitas.identitas_peserta
-                    if len(data) < 5:
+                    if any([not x for x in data]):
                         self.formIdentitas.title.SetLabel('DATA TIDAK LENGKAP')
+                        self.formIdentitas.Update()
+                        self.formIdentitas.Layout()
+                        self.formIdentitas.Refresh()
                     else:
                         self.JOY_DO_SOMETHING = False
                         self.onSwitchPanels('jeda')
@@ -506,8 +530,10 @@ class ViewerFrame(wx.Frame):
             if self.LOCK_PANEL:
                 if abs(posx) <= neutral:
                     self.JOY_DO_SOMETHING = True
+                    self.NEUTRAL = True
                     self.LOCK_PANEL = False
                     self.sesiPenilaian.startTime = time.time()
+                    print 'Panel Release'
                 else:
                     pass
             else:
@@ -550,13 +576,9 @@ class ViewerFrame(wx.Frame):
                     else:
                         pass
                 else:
-                    # TODO: test this, not working bro(220318)
-                    curr_time = time.time()
-                    time_remaining = self.IMAGE_TRANSITION_TIMEOUT - curr_time
-                    print "TIME: ", time_remaining
-                    if (posx >= full and self.NEUTRAL) or time_remaining < 0:
+                    print 'IN Transition'
+                    if posx >= full and self.NEUTRAL:
                         self.NEUTRAL = False
-                        self.IMAGE_TRANSITION = False if self.sesiPenilaian.shouldStop() or time_remaining < 0 else self.IMAGE_TRANSITION
                         if not self.sesiPenilaian.shouldStop():
                             print 'Load Next Image'
                             if self.sesiPenilaian.isWrong:
@@ -566,6 +588,7 @@ class ViewerFrame(wx.Frame):
                             self.sesiPenilaian.loadImage(None, 0)
                             self.sesiPenilaian.startTime = time.time()
                         elif self.sesiPenilaian.shouldStop():
+                            self.NEUTRAL = True
                             self.IMAGE_TRANSITION = False
                             if self.sesi == 0:
                                 self.sesiJeda.WritePesan(self.txtOPN)
@@ -730,6 +753,7 @@ class ViewerFrame(wx.Frame):
     def onSwitchPanels(self, window):
         """"""
         if window == 'main':
+            self.opening.Hide()
             self.formIdentitas.Hide()
             self.sesiJeda.Hide()
             self.contohGambar.Hide()
@@ -772,7 +796,16 @@ class ViewerFrame(wx.Frame):
         self.Refresh()
 
 
+# class MyApp(wx.App, InspectionMixin):
+#     def OnInit(self):
+#         self.Init()  # initialize the inspection tool
+#         frame = ViewerFrame()
+#         frame.Show()
+#         self.SetTopWindow(frame)
+#         return True
+
 if __name__ == "__main__":
     app = wx.App()
     frame = ViewerFrame()
+    # app = MyApp()
     app.MainLoop()
