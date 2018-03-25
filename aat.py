@@ -115,7 +115,7 @@ class ImagePanel(wx.Panel):
         path_to_image = list(self.picPaths.glob(img_path))
         image_used = []
         repetition = 2 if blok == 0 else 12
-        for x in xrange(1): #TODO: REVERT
+        for x in xrange(repetition):
             image_used.extend([AatImage(folder) for folder in path_to_image])
         random.shuffle(image_used)
         print "jumlah foto: ", len(image_used)
@@ -124,7 +124,7 @@ class ImagePanel(wx.Panel):
     def setCurrentImage(self, image):
         self.current_image = image
         self.isWrong = False
-        print "img left:", len(self.images)
+        # print "img left:", len(self.images)
 
     def getRandomImage(self):
         return self.images.pop(self.images.index(random.choice(self.images))) if self.images else None
@@ -154,7 +154,7 @@ class ImagePanel(wx.Panel):
         info = self.image_name
         response = (time.time() - self.startTime) * 1000
         if self.isWrong:
-            response = -1.0 * self.firstResponse
+            response *= -1.0
         score_set = (str(info), response)
         self.score.append(score_set)
         self.DONE = True
@@ -280,7 +280,7 @@ class FormIdentitas(wx.Panel):
         gridSizer.Add(input_sekolah_sizer, 0, wx.ALIGN_LEFT)
         gridSizer.Add(input_sekolah, 0, wx.ALIGN_LEFT)
 
-        self.pesan = 'Gerakan Joystick ke kanan untuk melanjutkan'
+        self.pesan = 'Geser Joystick ke kanan untuk melanjutkan'
         self.title = wx.StaticText(self, wx.ID_ANY, label=self.pesan, style=wx.ALIGN_CENTER)
         font = wx.Font(20,  wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.title.SetFont(font)
@@ -328,7 +328,7 @@ class FormJeda(wx.Panel):
         self.title.SetFont(font)
         self.title.Wrap(750)
 
-        pesan_geser = 'Gerakan Joystick ke kanan untuk melanjutkan'
+        pesan_geser = 'Geser Joystick ke kanan untuk melanjutkan'
         font_geser = wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.sub_title = wx.StaticText(self, wx.ID_ANY, label=pesan_geser, style=wx.ALIGN_BOTTOM)
         self.sub_title.SetFont(font_geser)
@@ -448,29 +448,25 @@ sehingga kumpulan foto baru akan ditampilkan.
         self.sizer.Add(self.sesiJeda, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
         self.sizer.Fit(self)
-        if wx.DisplaySize() >= (1920, 1080):
-            self.SetSize((1366, 768))
-        else:
-            self.ShowFullScreen(True)
+        # if wx.DisplaySize() >= (1920, 1080):
+        #     self.SetSize((1366, 768))
+        # else:
+        self.ShowFullScreen(True)
         self.joystick = wx.adv.Joystick()
         self.joystick.SetCapture(self)
         self.Bind(wx.EVT_JOY_MOVE, self.onMove)
-        wx.CallLater(100, self.opening_splashscreen)
+        # managed event that has any delay to prevent double execution, opening_splashscreen() only start when
+        # program run the first time. as later it will mainly watch for transition_timeout()
+        self.timed_event = wx.CallLater(100, self.opening_splashscreen)
         self.JOY_DO_SOMETHING = True
         self.NEUTRAL = True
         self.IMAGE_TRANSITION = False
-        self.IMAGE_TRANSITION_TIMEOUT = 0 # WHEN the timeout occure (10 seconds after reaching NEUTRAL)
         self.hasil = []
         self.Show()
 
     def transition_timeout(self):
-        # print 'HERE TRANSITION'
-        present = time.time() + 8
-        timeout = 8
-        while timeout > 0:
-            ct = time.time()
-            timeout = present - ct
-            # print 'Timeout', timeout
+        # called later when we switch to sesiJeda()
+        print 'HERE TRANSITION'
         if not self.sesiPenilaian.IsShown():
             print "TIMEOUT REACHED"
             self.sesi += 1
@@ -481,13 +477,13 @@ sehingga kumpulan foto baru akan ditampilkan.
             self.onSwitchPanels('main')
 
     def opening_splashscreen(self):
-        print 'HERE!'
+        # print 'HERE!'
         present = time.time() + 2
         timeout = 2
         while timeout > 0:
             ct = time.time()
             timeout = present - ct
-            print 'Timeout', timeout
+            # print 'Timeout', timeout
         self.onSwitchPanels('menu')
 
     def onMove(self, event):
@@ -533,11 +529,14 @@ sehingga kumpulan foto baru akan ditampilkan.
                     self.NEUTRAL = True
                     self.LOCK_PANEL = False
                     self.sesiPenilaian.startTime = time.time()
+                    if self.timed_event.IsRunning():
+                        self.timed_event.Stop()
+                        print 'TIMED EVENT STOPPED'
                     print 'Panel Release'
                 else:
                     pass
             else:
-                if not self.IMAGE_TRANSITION:
+                if not self.IMAGE_TRANSITION and (abs(posx) <= neutral):
                     # Joystick moves and image is zoomed in/out
                     if abs(posy) > neutral and self.NEUTRAL:
                         self.NEUTRAL = False
@@ -558,7 +557,7 @@ sehingga kumpulan foto baru akan ditampilkan.
                             scale = 1.0
                         assert not self.NEUTRAL
                         self.sesiPenilaian.loadImage('PULL', scale)
-                    elif (abs(posy) <= neutral ) and self.JOY_DO_SOMETHING:
+                    elif (abs(posy) <= neutral ) and (abs(posx) <= neutral) and self.JOY_DO_SOMETHING:
                         # Kalo Joystick ke posisi normal sebelum mencapai posisi maks
                         # Layar hitam HARUS tampil kalo salah respon
                         if self.sesiPenilaian.isWrong:
@@ -568,22 +567,22 @@ sehingga kumpulan foto baru akan ditampilkan.
                             self.IMAGE_TRANSITION = True
                             self.sesiPenilaian.isWrong = False
                             self.sesiPenilaian.loadImage(None, 9)
-                    elif (abs(posy) <= neutral ) and not self.JOY_DO_SOMETHING:
+                    elif (abs(posy) <= neutral ) and (abs(posx) <= neutral) and not self.JOY_DO_SOMETHING:
                         self.sesiPenilaian.isWrong = False
                         self.sesiPenilaian.loadImage(None, 9) # memastikan gambar blank kalo salah
                         self.NEUTRAL = True
                         self.JOY_DO_SOMETHING = True
                         self.IMAGE_TRANSITION = True
-                        # Set timeout for 10 seconds
-                        self.IMAGE_TRANSITION_TIMEOUT = time.time() + 10
                     else:
                         pass
                 else:
                     print 'IN Transition'
-                    if posx >= full and self.NEUTRAL:
+                    if (posx >= full) and (abs(posy) <= neutral) and self.NEUTRAL:
                         self.NEUTRAL = False
+                        self.IMAGE_TRANSITION = False
                         if not self.sesiPenilaian.shouldStop():
                             print 'Load Next Image'
+                            assert self.IMAGE_TRANSITION == False
                             if self.sesiPenilaian.isWrong:
                                 self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.current_image)
                             self.sesiPenilaian.resetFirstResponse()
@@ -601,25 +600,25 @@ sehingga kumpulan foto baru akan ditampilkan.
                             else:
                                 self.sesiPenilaian.resetFirstResponse()
                                 self.save(self.sesiPenilaian.getScore())
-                                self.sesiPenilaian.clearScore()
-                                self.sesiPenilaian.wrongImages = []
-                                print "scoreIsClear:", len(
-                                    self.sesiPenilaian.getScore()) == 0
-                                jeda = 'OPN' if 1 <= self.sesi < 3 else 'END'
-                                pesan = JENIS_BLOK[self.sesi+1] if 1 <= self.sesi < 3 else self.txtEND
-                                self.jenisJeda = jeda
-                                self.sesiJeda.set_title(pesan)
-                                self.sesiJeda.set_subtitle('Geser joystick ke kanan untuk memulai')
-                                self.onSwitchPanels('jeda')
+                            self.sesiPenilaian.clearScore()
+                            self.sesiPenilaian.wrongImages = []
+                            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
+                            self.JOY_DO_SOMETHING = False # buat sesi jeda biar ga langsung gerak
+                            jeda = 'OPN' if 0 <= self.sesi < 3 else 'END'
+                            pesan = JENIS_BLOK[self.sesi+1] if 0 <= self.sesi < 3 else self.txtEND
+                            sub_pesan = 'Geser joystick ke kanan untuk memulai' if 0 <= self.sesi < 3 else ' '
+                            self.jenisJeda = jeda
+                            self.sesiJeda.set_title(pesan)
+                            self.sesiJeda.set_subtitle(sub_pesan)
                             if self.jenisJeda == 'OPN':
-                                wx.CallLater(100, self.transition_timeout)
-                    elif posx <= neutral and not self.NEUTRAL:
+                                self.timed_event = wx.CallLater(10000, self.transition_timeout)
+                            self.onSwitchPanels('jeda')
+                    elif (abs(posx) <= neutral) and (abs(posy) <= neutral) and not self.NEUTRAL:
                         self.NEUTRAL = True
-                        self.IMAGE_TRANSITION = False
                     else:
                         pass
         elif self.sesiJeda.IsShown():
-            print self.jenisJeda
+            print self.jenisJeda, self.JOY_DO_SOMETHING
             if posx >= full and self.JOY_DO_SOMETHING:
                 self.JOY_DO_SOMETHING = False
                 self.LOCK_PANEL = True
@@ -648,7 +647,8 @@ sehingga kumpulan foto baru akan ditampilkan.
                 elif self.jenisJeda == 'END':
                     self.formIdentitas.clear_values()
                     self.jenisJeda = 'INS1'
-                    self.sesiJeda.set_title(self.txtINS1)
+                    self.sesiJeda.set_title(self.txtINS1, 14)
+                    self.sesiJeda.set_subtitle('Geser Joystick ke kanan untuk melanjutkan', 14)
                     self.onSwitchPanels('menu')
             elif abs(posx) <= neutral and not self.JOY_DO_SOMETHING:
                 self.JOY_DO_SOMETHING = True
