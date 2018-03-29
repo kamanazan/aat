@@ -4,7 +4,7 @@ import time
 if __name__ == "__main__":
     options = {
         'build':{
-            'build_exe': 'build/build_%s' % time.strftime(" %d%m%Y_%H%M%S", time.localtime())
+            'build_exe': 'build/program-aat_v%s' % time.strftime("%d%m%Y.%H%M", time.localtime())
         }
     }
     executables = [
