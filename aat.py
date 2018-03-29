@@ -48,9 +48,9 @@ class AatImage:
             self.wrong_image = ''
 
     def image_on_phase(self, scale):
-        if scale < 0.3:
+        if scale < 0.2:
             phase = 0
-        elif (scale >= 0.3) and (scale <=0.4):
+        elif (scale >= 0.2) and (scale <=0.4):
             phase = 1
         elif (scale > 0.4) and (scale <= 0.6):
             phase = 2
@@ -365,7 +365,7 @@ class FormContohSalah(wx.Panel):
         # Add a panel so it looks correct on all platforms
         wx.Panel.__init__(self, parent)
 
-        pesan_next = 'Gerakan Joystick ke kanan untuk memulai tugas pada sesi Latihan'
+        pesan_next = 'Sesi Latihan'
         font_geser = wx.Font(28, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self.title = wx.StaticText(self, wx.ID_ANY, label=pesan_next, style=wx.ALIGN_CENTER)
         self.title.SetFont(font_geser)
@@ -426,18 +426,14 @@ Anda diminta untuk MENARIK/MENDORONG joystick hingga tampilan kumpulan foto meng
 (layar kosong/ end position)
 
 Setelah layar hitam kosong / end position, Anda diminta untuk mengembalikan joystick ke posisi 
-tengah kembali dan kemudian gerakkan joystick ke kanan sehingga kumpulan foto baru akan 
-ditampilkan.
+tengah kembali dan kemudian kumpulan foto baru akan ditampilkan.
 
 * Jika Anda melakukan KESALAHAN dalam memberikan respon gerakan joystick pada warna foto yang 
 tampil, maka akan muncul foto yang berisi tanda X. Anda selanjutnya harus mengembalikan joystick 
-ke posisi tengah hingga muncul layar hitam kosong. Gerakkan kembali joystick Anda ke kanan 
-sehingga kumpulan foto baru akan ditampilkan.
+ke posisi tengah hingga muncul layar hitam kosong dan kumpulan foto baru akan ditampilkan.
 """
         self.txtINS2 = 'ADA PERTANYAAN?'
-        self.txtOPN = 'Berikut ini adalah sesi program\n\n\n\nTARIK joystick untuk foto HITAM PUTIH\nDORONG joystick untuk foto SEPHIA\n\n\nIngat anda harus MENDORONG\MENARIK joystick hingga MAKSIMAL dan\nMENGEMBALIKAN joystick ke posisi tengah untuk melihat foto berikutnya\n\n\nLAKUKAN SECEPAT DAN SEAKURAT MUNGKIN\n\n\n\nGeser joystick ke kanan untuk memulai'
-        self.txtREST = 'SESI 1 telah berakhir\n\n\nSilahkan tunggu instruksi selanjutnya'
-        self.txtEND = 'SELESAI\nDAN\nTERIMA KASIH'
+        self.txtEND = 'SELESAI DAN TERIMA KASIH'
         self.dec = decimal.Decimal
         self.sesiJeda.set_title(self.txtINS1, 14)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -460,7 +456,6 @@ sehingga kumpulan foto baru akan ditampilkan.
         self.timed_event = wx.CallLater(100, self.opening_splashscreen)
         self.JOY_DO_SOMETHING = True
         self.NEUTRAL = True
-        self.IMAGE_TRANSITION = False
         self.hasil = []
         self.Show()
 
@@ -469,11 +464,16 @@ sehingga kumpulan foto baru akan ditampilkan.
         print 'HERE TRANSITION'
         if not self.sesiPenilaian.IsShown():
             print "TIMEOUT REACHED"
-            self.sesi += 1
+            if self.contohSalah.IsShown():
+                # lagi ada di jeda untuk sesi latihan
+                self.sesi = 0
+            else:
+                self.sesi += 1
             self.sesiPenilaian.prepare_images(self.sesi)
-            self.sesiPenilaian.setCurrentImage(AatImage(''))
+            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
             self.sesiPenilaian.loadImage(None, 0)
             self.LOCK_PANEL = False
+            self.sesiPenilaian.startTime = time.time()
             self.onSwitchPanels('main')
 
     def opening_splashscreen(self):
@@ -485,6 +485,38 @@ sehingga kumpulan foto baru akan ditampilkan.
             timeout = present - ct
             # print 'Timeout', timeout
         self.onSwitchPanels('menu')
+
+    def image_next_step(self):
+        if not self.sesiPenilaian.shouldStop():
+            if self.sesiPenilaian.isWrong:
+                self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.current_image)
+            self.sesiPenilaian.resetFirstResponse()
+            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
+            self.sesiPenilaian.loadImage(None, 0)
+            self.sesiPenilaian.startTime = time.time()
+        elif self.sesiPenilaian.shouldStop():
+            self.NEUTRAL = True
+            if self.sesi == 0:
+                self.sesiPenilaian.clearScore()
+                self.sesiJeda.set_title(JENIS_BLOK[self.sesi + 1])
+                self.jenisJeda = 'OPN'
+                self.onSwitchPanels('jeda')
+            else:
+                self.sesiPenilaian.resetFirstResponse()
+                self.save(self.sesiPenilaian.getScore())
+            self.sesiPenilaian.clearScore()
+            self.sesiPenilaian.wrongImages = []
+            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
+            self.JOY_DO_SOMETHING = False  # buat sesi jeda biar ga langsung gerak
+            jeda = 'OPN' if 0 <= self.sesi < 3 else 'END'
+            pesan = JENIS_BLOK[self.sesi + 1] if 0 <= self.sesi < 3 else self.txtEND
+            sub_pesan = 'Geser joystick ke kanan untuk memulai' if 0 <= self.sesi < 3 else ' '
+            self.jenisJeda = jeda
+            self.sesiJeda.set_title(pesan)
+            self.sesiJeda.set_subtitle(sub_pesan)
+            if self.jenisJeda == 'OPN':
+                self.timed_event = wx.CallLater(1500, self.transition_timeout)
+            self.onSwitchPanels('jeda')
 
     def onMove(self, event):
         # Rules:
@@ -501,8 +533,9 @@ sehingga kumpulan foto baru akan ditampilkan.
         posy = self.dec(-(y - 32767) * 2 / 65535.).quantize(self.dec('0.01'), rounding='ROUND_HALF_UP')
         # the value considered as 'neutral'(center position).
         # this cannot be exactly 0.0 as the x/y axis rarely have that value in neutral position
-        neutral = 0.3
+        neutral = 0.2
         full = 0.9
+        mov2neutral = 0.05
 
         if self.formIdentitas.IsShown():
             if self.LOCK_PANEL:
@@ -528,103 +561,50 @@ sehingga kumpulan foto baru akan ditampilkan.
                     self.JOY_DO_SOMETHING = True
                     self.NEUTRAL = True
                     self.LOCK_PANEL = False
-                    # self.sesiPenilaian.startTime = time.time()
-                    if self.timed_event.IsRunning():
-                        self.timed_event.Stop()
-                        print 'TIMED EVENT STOPPED'
+                    self.sesiPenilaian.startTime = time.time()
                     print 'Panel Release'
                 else:
                     pass
             else:
-                if not self.IMAGE_TRANSITION:
-                    # Joystick moves and image is zoomed in/out
-                    assert self.IMAGE_TRANSITION == False
-                    if abs(posy) > neutral and self.NEUTRAL:
-                        self.NEUTRAL = False
-                        self.sesiPenilaian.calculateFirstResponse()
-                    if posy > neutral and self.JOY_DO_SOMETHING:
-                        self.JOY_DO_SOMETHING = False if posy >= full else True
-                        scale = abs(posy)
-                        if posy >= full and self.sesi != 0:
-                            self.sesiPenilaian.calculateResponse()
-                            scale = 1.0
-                        assert not self.NEUTRAL
-                        print posx, posy
-                        self.sesiPenilaian.loadImage('PUSH', scale)
-                    elif posy < -neutral and self.JOY_DO_SOMETHING:
-                        self.JOY_DO_SOMETHING = False if posy <= -full else True
-                        scale = abs(posy)
-                        if posy <= -full and self.sesi != 0:
-                            self.sesiPenilaian.calculateResponse()
-                            scale = 1.0
-                        assert not self.NEUTRAL
-                        print posx, posy
-                        self.sesiPenilaian.loadImage('PULL', scale)
-                    # FIXME: These two DRY
-                    elif (abs(posy) <= neutral ) and (abs(posx) <= neutral) and self.JOY_DO_SOMETHING:
-                        # Kalo Joystick ke posisi normal sebelum mencapai posisi maks
-                        # Layar hitam HARUS tampil kalo salah respon
-                        if self.sesiPenilaian.isWrong:
-                            self.sesiPenilaian.calculateResponse()
-                            self.NEUTRAL = True
-                            self.JOY_DO_SOMETHING = True
-                            self.IMAGE_TRANSITION = True
-                            self.sesiPenilaian.isWrong = False
-                            self.LOCK_PANEL = True
-                            print posx, posy
-                            self.sesiPenilaian.loadImage(None, 9)
-                    elif (abs(posy) <= neutral ) and (abs(posx) <= neutral) and not self.JOY_DO_SOMETHING:
+                # Joystick moves and image is zoomed in/out
+                if abs(posy) > neutral and self.NEUTRAL:
+                    self.NEUTRAL = False
+                    self.sesiPenilaian.calculateFirstResponse()
+                if posy > neutral and self.JOY_DO_SOMETHING:
+                    self.JOY_DO_SOMETHING = False if posy >= full else True
+                    scale = abs(posy)
+                    if posy >= full and self.sesi != 0:
+                        self.sesiPenilaian.calculateResponse()
+                        scale = 1.0
+                    assert not self.NEUTRAL
+                    print posx, posy
+                    self.sesiPenilaian.loadImage('PUSH', scale)
+                elif posy < -neutral and self.JOY_DO_SOMETHING:
+                    self.JOY_DO_SOMETHING = False if posy <= -full else True
+                    scale = abs(posy)
+                    if posy <= -full and self.sesi != 0:
+                        self.sesiPenilaian.calculateResponse()
+                        scale = 1.0
+                    assert not self.NEUTRAL
+                    print posx, posy
+                    self.sesiPenilaian.loadImage('PULL', scale)
+                elif (mov2neutral < abs(posy) <= neutral ) and self.JOY_DO_SOMETHING:
+                    # Kalo Joystick ke posisi normal sebelum mencapai posisi maks
+                    # Layar hitam HARUS tampil kalo salah respon
+                    if self.sesiPenilaian.isWrong:
+                        self.sesiPenilaian.calculateResponse()
                         self.sesiPenilaian.isWrong = False
-                        self.sesiPenilaian.loadImage(None, 9) # memastikan gambar blank kalo salah
-                        self.NEUTRAL = True
-                        self.JOY_DO_SOMETHING = True
-                        self.IMAGE_TRANSITION = True
-                        self.LOCK_PANEL = True
-                    else:
-                        pass
+                        self.JOY_DO_SOMETHING = False
+                        print posx, posy
+                        self.sesiPenilaian.loadImage(None, 9)
+                elif (abs(posy) <= mov2neutral ) and not self.JOY_DO_SOMETHING:
+
+                    self.sesiPenilaian.isWrong = False
+                    self.NEUTRAL = True
+                    self.JOY_DO_SOMETHING = True
+                    self.image_next_step()
                 else:
-                    # print 'IN Transition'
-                    if (posx >= full) and (abs(posy) <= neutral) and self.NEUTRAL:
-                        self.NEUTRAL = False
-                        self.IMAGE_TRANSITION = False
-                        self.LOCK_PANEL = True
-                        if not self.sesiPenilaian.shouldStop():
-                            print 'Load Next Image', posx, posy
-                            assert self.IMAGE_TRANSITION == False
-                            if self.sesiPenilaian.isWrong:
-                                self.sesiPenilaian.wrongImages.append(self.sesiPenilaian.current_image)
-                            self.sesiPenilaian.resetFirstResponse()
-                            self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
-                            self.sesiPenilaian.loadImage(None, 0)
-                            self.sesiPenilaian.startTime = time.time()
-                        elif self.sesiPenilaian.shouldStop():
-                            self.NEUTRAL = True
-                            self.IMAGE_TRANSITION = False
-                            if self.sesi == 0:
-                                self.sesiPenilaian.clearScore()
-                                self.sesiJeda.set_title(JENIS_BLOK[self.sesi+1])
-                                self.jenisJeda = 'OPN'
-                                self.onSwitchPanels('jeda')
-                            else:
-                                self.sesiPenilaian.resetFirstResponse()
-                                self.save(self.sesiPenilaian.getScore())
-                            self.sesiPenilaian.clearScore()
-                            self.sesiPenilaian.wrongImages = []
-                            print "scoreIsClear:", len(self.sesiPenilaian.getScore()) == 0
-                            self.JOY_DO_SOMETHING = False # buat sesi jeda biar ga langsung gerak
-                            jeda = 'OPN' if 0 <= self.sesi < 3 else 'END'
-                            pesan = JENIS_BLOK[self.sesi+1] if 0 <= self.sesi < 3 else self.txtEND
-                            sub_pesan = 'Geser joystick ke kanan untuk memulai' if 0 <= self.sesi < 3 else ' '
-                            self.jenisJeda = jeda
-                            self.sesiJeda.set_title(pesan)
-                            self.sesiJeda.set_subtitle(sub_pesan)
-                            if self.jenisJeda == 'OPN':
-                                self.timed_event = wx.CallLater(10000, self.transition_timeout)
-                            self.onSwitchPanels('jeda')
-                    elif (abs(posx) <= neutral) and (abs(posy) <= neutral) and not self.NEUTRAL:
-                        self.NEUTRAL = True
-                    else:
-                        pass
+                    pass
         elif self.sesiJeda.IsShown():
             if posx >= full and self.JOY_DO_SOMETHING:
                 self.JOY_DO_SOMETHING = False
@@ -640,10 +620,14 @@ sehingga kumpulan foto baru akan ditampilkan.
                     self.jenisJeda = 'INS2'
                 elif self.jenisJeda == 'INS2':
                     self.onSwitchPanels('salah')
+                    self.timed_event = wx.CallLater(1500, self.transition_timeout)
                 elif self.jenisJeda == 'OPN':
+                    if self.timed_event.IsRunning():
+                        self.timed_event.Stop()
+                        print 'TIMED EVENT STOPPED'
                     self.sesi += 1
                     self.sesiPenilaian.prepare_images(self.sesi)
-                    self.sesiPenilaian.setCurrentImage(AatImage(''))
+                    self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
                     self.sesiPenilaian.loadImage(None, 0)
                     self.onSwitchPanels('main')
                 elif self.jenisJeda == 'REST':
@@ -673,7 +657,7 @@ sehingga kumpulan foto baru akan ditampilkan.
                 self.LOCK_PANEL = True
                 self.sesi = 0
                 self.sesiPenilaian.prepare_images(self.sesi)
-                self.sesiPenilaian.setCurrentImage(AatImage(''))
+                self.sesiPenilaian.setCurrentImage(self.sesiPenilaian.getRandomImage())
                 self.sesiPenilaian.loadImage(None, 0)
                 self.onSwitchPanels('main')
 
@@ -763,7 +747,6 @@ sehingga kumpulan foto baru akan ditampilkan.
         for w in self.windows:
             if w != window:
                 self.windows[w].Hide()
-        self.IMAGE_TRANSITION = True if window == 'main' else False
         self.windows[window].Show()
         self.Update()
         self.Layout()
