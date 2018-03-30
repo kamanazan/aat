@@ -520,7 +520,8 @@ ke posisi tengah hingga muncul layar hitam kosong dan kumpulan foto baru akan di
             self.JOY_DO_SOMETHING = False  # buat sesi jeda biar ga langsung gerak
             jeda = 'OPN' if 0 <= self.sesi < 3 else 'END'
             pesan = JENIS_BLOK[self.sesi + 1] if 0 <= self.sesi < 3 else self.txtEND
-            sub_pesan = 'Geser joystick ke kanan untuk memulai' if 0 <= self.sesi < 3 else ' '
+            # sub_pesan = 'Geser joystick ke kanan untuk memulai' if 0 <= self.sesi < 3 else ' '
+            sub_pesan = ' '
             self.jenisJeda = jeda
             self.sesiJeda.set_title(pesan)
             self.sesiJeda.set_subtitle(sub_pesan)
