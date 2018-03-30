@@ -76,6 +76,7 @@ class ImagePanel(wx.Panel):
         :param rep: extra param that set the number of repetition for the image set
         """
         wx.Panel.__init__(self, parent)
+        self.SetDoubleBuffered(True)
         self.SetBackgroundColour('BLACK')
         self.widthDisp, self.heightDisp = wx.DisplaySize()
         self.displayed_image = wx.Image(1, 1)
@@ -91,24 +92,35 @@ class ImagePanel(wx.Panel):
         self.startTime = 0
         self.score = []
         # Preparing the layout
-        self.imgSizer = wx.GridSizer(rows=1, cols=1, hgap=5, vgap=5)
-        # self.imgSizer = wx.BoxSizer(wx.VERTICAL)
-        self.imageCtrl = wx.StaticBitmap(self, id=wx.ID_ANY, bitmap=wx.Bitmap(wx.Image(self.displayed_image)))
+        self.imgSizer = wx.GridSizer(rows=2, cols=1, hgap=5, vgap=5)
+        self.buffer = wx.Bitmap(wx.Image(self.displayed_image))
 
-        pesan_next = 'Gerakan Joystick kembali ke posisi tengah'
-        self.pesan_salah = wx.StaticText(
-            self, wx.ID_ANY, label=pesan_next, style=wx.ALIGN_CENTER)
-        font = wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
-        self.pesan_salah.SetFont(font)
-        self.pesan_salah.SetForegroundColour('WHITE')
-        self.pesan_salah.Hide()
-        temp_sizer = wx.BoxSizer(wx.VERTICAL)
-        temp_sizer.Add(self.imageCtrl, 0, wx.ALIGN_CENTER, 0)
-        temp_sizer.AddSpacer(20)
-        temp_sizer.Add(self.pesan_salah, 0, wx.ALIGN_CENTER, 0)
-        self.imgSizer.Add(temp_sizer, 0, wx.ALIGN_CENTER, 0)
-        self.imgSizer.Fit(self)
-        self.SetSizer(self.imgSizer)
+        self.pesan_next = 'Gerakan Joystick kembali ke posisi tengah'
+        self.font = wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+
+    def on_paint(self, evt):
+        dc = wx.PaintDC(self)
+        dc.SetBackground(wx.Brush("Black"))
+        dc.Clear()
+        mid_panel_x = self.GetSize()[0] / 2
+        mid_panel_y = self.GetSize()[1] / 2
+        mid_bmp_x = self.buffer.GetSize()[0] / 2
+        mid_bmp_y = self.buffer.GetSize()[1] / 2
+        bmp_pos_x = mid_panel_x - mid_bmp_x
+        bmp_pos_y = mid_panel_y - mid_bmp_y
+
+        dc.DrawBitmap(self.buffer, bmp_pos_x, bmp_pos_y)
+        if self.isWrong:
+            dc.SetFont(self.font)
+            dc.SetTextForeground('WHITE')
+            text_size = dc.GetTextExtent(self.pesan_next)
+            mid_text_x = text_size[0] / 2
+            text_pos_x = mid_panel_x - mid_text_x
+            margin_bottom = 20
+            text_pos_y = self.GetSize()[1] - (text_size[1] + margin_bottom)
+            dc.DrawText(self.pesan_next, text_pos_x, text_pos_y)
 
     def prepare_images(self, blok):
         img_path = '*%s*/*/*' % JENIS_BLOK[blok]
@@ -141,14 +153,12 @@ class ImagePanel(wx.Panel):
         self.isWrong = self.current_image.action != action if action and not self.isWrong else self.isWrong
         self.displayed_image = self.current_image.wrong_image if self.isWrong and scale != 9 else self.current_image.image_on_phase(scale)
         print 'Displayed Image:', self.displayed_image if isinstance(self.displayed_image, str) else 'BLANK'
-        self.imageCtrl.SetBitmap(wx.Bitmap(self.displayed_image))
-        if self.isWrong:
-            self.pesan_salah.Show()
-        else:
-            self.pesan_salah.Hide()
-        self.Update()
+        bmp = wx.Bitmap(self.displayed_image)
+        self.buffer = bmp
+
         self.Layout()
-        self.Refresh()
+        self.Refresh()#eraseBackground=False
+        self.Update()
 
     def calculateResponse(self):
         info = self.image_name
@@ -409,7 +419,7 @@ class ViewerFrame(wx.Frame):
         self.folderPath = ""
         self.sesi = 0 # dipakai untuk menentukan jenis block, 0=Latihan, 1..3=Blok A..C
         self.latihan = True
-        self.jenisJeda = 'INS1'  #[INS1|INS2|OPN|REST|END]
+        self.jenisJeda = 'INS1'
         self.jumlahLatihan = 1
         self.LOCK_PANEL = False
         self.txtINS1 = """
