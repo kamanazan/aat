@@ -1,2 +1,4 @@
 cx_Freeze==5.1.1
 wxPython==4.0.1
+pathlib2==2.3.0
+openpyxl==2.5.2
